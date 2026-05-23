@@ -8,6 +8,9 @@ import openpyxl
 from openpyxl.styles import Alignment, Border, Side, PatternFill, Font
 import docx
 from docx.shared import Pt
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Caminos absolutos a los archivos de trabajo
 WORK_DIR = "/home/eivorkinkest/Documentos/Docs_SENA/DocsOriginales"
@@ -369,6 +372,14 @@ def main():
     parser.add_argument("--dry-run", action="store_true", help="Analizar markdown y memoria sin escribir archivos.")
     args = parser.parse_args()
 
+    # Preguntar autorización de email
+    send_email = False
+    if not args.dry_run:
+        from email_module import preguntar_envio_email
+        send_email = preguntar_envio_email()
+    else:
+        print("[Dry Run] Se preguntaría si desea enviar correo electrónico al finalizar.")
+
     # 1. Resolver fecha de ejecución
     if args.date:
         exec_date = datetime.datetime.strptime(args.date, "%Y-%m-%d").date()
@@ -467,6 +478,66 @@ def main():
             f.write(f"Acta Word Momento: {target_moment if target_moment else 'N/A'}\n")
             f.write(f"Estado: COMPLETADO\n")
         print(f"[Log] Resumen guardado en {log_path}")
+
+    # 6. Envío de email si autorizado
+    if send_email and not args.dry_run:
+        from email_module import (
+            enviar_email,
+            construir_asunto,
+            construir_cuerpo,
+            reintentar_envio_manual,
+        )
+
+        modo = os.getenv("EMAIL_MODO", "pruebas")
+        if modo == "produccion":
+            destinatario = os.getenv(
+                "EMAIL_DESTINATARIO_PRODUCCION", "oiospina@sena.edu.co"
+            )
+        else:
+            destinatario = os.getenv(
+                "EMAIL_DESTINATARIO_PRUEBAS", "jmqo2015@gmail.com"
+            )
+        cc = os.getenv("EMAIL_CC", "eivorkinkest@gmail.com")
+
+        fecha_inicio = (
+            bitacora_data.get("fecha_inicio", "") if bitacora_data else ""
+        )
+        fecha_fin = (
+            bitacora_data.get("fecha_fin", "") if bitacora_data else ""
+        )
+
+        asunto = construir_asunto(
+            pending_num, fecha_inicio, fecha_fin, target_moment
+        )
+        cuerpo = construir_cuerpo(fecha_inicio, fecha_fin, target_moment)
+
+        adjuntos = []
+        if log_dir and os.path.exists(log_dir):
+            for fname in os.listdir(log_dir):
+                if fname.endswith((".xlsx", ".docx")):
+                    adjuntos.append(os.path.join(log_dir, fname))
+
+        exito, mensaje = enviar_email(
+            destinatario=destinatario,
+            cc=cc,
+            asunto=asunto,
+            cuerpo=cuerpo,
+            adjuntos=adjuntos,
+            intentos=3,
+        )
+
+        if exito:
+            print(f"[Email] {mensaje}")
+        else:
+            print(f"[Email] {mensaje}")
+            if log_dir:
+                reintentar_envio_manual(pending_num, log_dir)
+
+    elif send_email and args.dry_run:
+        print(
+            "[Dry Run] Se habría enviado un correo electrónico"
+            " con los documentos adjuntos."
+        )
 
     print(f"=== AUTOMATIZACIÓN SENA FINALIZADA CON ÉXITO ===")
 
