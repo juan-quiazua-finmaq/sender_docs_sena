@@ -1,0 +1,23 @@
+{
+  "session_id": "session_002",
+  "objetivo": "Refactor de automatización SENA: filas pares en Excel, respaldo Word, campos excluidos, Calibri 9pt, carpetas output, documentación",
+  "fecha_creacion": "2026-05-23",
+  "estado": "in_progress",
+  "subagentes_asignados": [
+    {
+      "tipo": "developer",
+      "tarea": "Implementar refactor de diligenciar.py según especificación v2",
+      "archivo_salida": "sessions/session_002/progress/developer_refactor.md"
+    },
+    {
+      "tipo": "tester",
+      "tarea": "Actualizar y ejecutar pruebas del refactor",
+      "archivo_salida": "sessions/session_002/progress/tester_refactor.md"
+    },
+    {
+      "tipo": "reviewer",
+      "tarea": "Revisar implementación del refactor",
+      "archivo_salida": "sessions/session_002/progress/reviewer_refactor.md"
+    }
+  ]
+}
