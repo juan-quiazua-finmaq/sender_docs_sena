@@ -4,12 +4,12 @@ Este proyecto automatiza el diligenciamiento de bitácoras (Excel) y actas de se
 
 ## 1. Propósito del Script
 
-El script `diligenciar.py` lee dos fuentes de datos en formato Markdown, extrae la información contextual de bitácoras y actas, y genera automáticamente:
+El script `scripts/diligenciar.py` lee dos fuentes de datos en formato Markdown, extrae la información contextual de bitácoras y actas, y genera automáticamente:
 
 - **Bitácoras en Excel** (`BitacoraMQuiazua<N>.xlsx`): Una por cada período de actividades, con metadatos y hasta 7 actividades detalladas.
 - **Actas en Word** (`Actas-Inicio-Medio-Final.docx`): Diligencia los momentos 2 (Seguimiento) y 3 (Evaluación Final) con observaciones, marcas de cumplimiento, compromisos de mejora y juicio de evaluación.
 
-El sistema mantiene un registro de qué bitácoras ya fueron procesadas mediante una etiqueta `[DILIGENCIADA]` en el archivo de histórico, evitando duplicados y permitiendo un flujo secuencial de ejecución.
+El sistema mantiene un registro de qué bitácoras ya fueron procesadas mediante una etiqueta `[DILIGENCIADA]` en el archivo de histórico, permitiendo un flujo de procesamiento por lote.
 
 ## 2. Requisitos Previos
 
@@ -29,24 +29,32 @@ pip install openpyxl python-docx
 ## 3. Estructura del Proyecto
 
 ```
-/home/eivorkinkest/Documentos/Docs_SENA/
-├── diligenciar.py                          # Script principal de automatización
-├── test_diligenciar.py                     # Suite de pruebas unitarias e integración
-├── memory_descriptions.md                  # Fuente JSON con descripciones inferidas por IA
-├── DocsOriginales/
-│   ├── BitacoraMQuiazua1.xlsx              # Plantilla original de bitácora (Excel)
-│   ├── BitacoraMQuiazua_template.xlsx      # Respaldo automático de plantilla limpia
-│   ├── Actas-Inicio-Medio-Final.docx       # Plantilla original de actas (Word)
-│   ├── Actas-Inicio-Medio-Final_template.docx  # Respaldo automático de plantilla limpia
-│   ├── historico_actividades.md            # Bitácoras manuales con estado [DILIGENCIADA]
-│   ├── memory_descriptions.md              # Copia de la fuente JSON de memoria
-│   └── FirmeManu.png                       # Firma digital del aprendiz
-├── sessions/
-│   ├── session_001/
-│   │   └── progress/                       # Artefactos de la sesión 1
-│   └── session_002/
-│       └── progress/                       # Artefactos de la sesión 2
-└── .venv/                                  # Entorno virtual Python
+/Docs_SENA/
+├── scripts/                          # Código ejecutable
+│   ├── diligenciar.py                # Script principal de automatización
+│   └── email_module.py               # Módulo de envío de correo
+├── tests/                            # Pruebas
+│   ├── test_diligenciar.py           # Suite de pruebas unitarias e integración
+│   └── test_email_module.py          # Pruebas del módulo de correo
+├── contexto/                         # Datos de entrada y plantillas
+│   ├── historico_actividades.md      # Bitácoras manuales con estado [DILIGENCIADA]
+│   ├── memory_descriptions.md        # Fuente JSON con descripciones inferidas por IA
+│   ├── BitacoraMQuiazua1.xlsx        # Plantilla original de bitácora (Excel)
+│   ├── BitacoraMQuiazua_template.xlsx# Respaldo automático de plantilla limpia
+│   ├── Actas-Inicio-Medio-Final.docx # Plantilla original de actas (Word)
+│   └── FirmeManu.png                 # Firma digital del aprendiz
+├── instrucciones/                    # Instrucciones para el agente
+│   ├── AGENTS.md                     # Reglas de operación del agente líder
+│   └── sessions/                     # Historial de sesiones de trabajo
+├── output/                           # Archivos generados (raíz)
+│   ├── bitacora1-2026-04-08/
+│   ├── bitacora2-2026-04-22/
+│   └── ...
+├── .env
+├── .gitignore
+├── requirements.txt
+├── README.md
+└── .venv/                            # Entorno virtual Python
 ```
 
 ## 4. Formato de `memory_descriptions.md`
@@ -102,7 +110,7 @@ Este archivo contiene un bloque JSON con las descripciones detalladas de cada bi
 
 ## 5. Formato de `historico_actividades.md`
 
-Este archivo es el registro manual de bitácoras. Cada bitácora se define con un encabezado de nivel 2 (`##`) y una lista de actividades. El script detecta automáticamente la primera bitácora que **no** tenga la etiqueta `[DILIGENCIADA]`.
+Este archivo es el registro manual de bitácoras. Cada bitácora se define con un encabezado de nivel 2 (`##`) y una lista de actividades. El script detecta automáticamente todas las bitácoras que **no** tengan la etiqueta `[DILIGENCIADA]` y las procesa en un solo lote.
 
 ```markdown
 # Historico de Actividades Manuel Quiazua
@@ -132,7 +140,7 @@ Este es un markdown que se actualiza de manera manual, su unica funcion es alime
 ## 6. Argumentos de Línea de Comandos
 
 ```
-python diligenciar.py [OPCIONES]
+python scripts/diligenciar.py [OPCIONES]
 ```
 
 | Argumento | Tipo | Descripción |
@@ -140,40 +148,61 @@ python diligenciar.py [OPCIONES]
 | `--date` | `YYYY-MM-DD` | Fuerza la fecha de ejecución. Si no se indica, usa la fecha actual del sistema. |
 | `--force-moment` | `2` o `3` | Fuerza el diligenciamiento de un acta específica (Momento 2 o 3), ignorando la detección automática por proximidad de fecha. |
 | `--dry-run` | flag | Modo de simulación: analiza los archivos de entrada, identifica la bitácora y el acta que se procesarían, pero **no escribe ningún archivo** ni modifica el histórico. |
+| `--no-email` | flag | Desactiva el envío de correo electrónico al finalizar. Por defecto, el correo se envía automáticamente sin preguntar. |
 
-## 7. Ejemplos de Ejecución
+## 7. Comportamiento de Envío de Correo
 
-**Ejecutar con la fecha actual (modo normal):**
+A partir de la sesión 004, el envío de correo ya **no pregunta** interactivamente al usuario. Por defecto, al finalizar la ejecución se envía un correo con todos los documentos generados. Para desactivarlo:
+
 ```bash
-python diligenciar.py
+python scripts/diligenciar.py --no-email
 ```
 
-**Simular ejecución sin escribir archivos:**
+El modo `--dry-run` también desactiva el envío.
+
+## 8. Procesamiento por Lote (Batch)
+
+El script detecta **todas** las bitácoras pendientes en `historico_actividades.md` y las procesa en una sola ejecución. Cada bitácora:
+
+1. Genera su archivo Excel en `output/bitacora<N>-<YYYY-MM-DD>/`
+2. Se marca como `[DILIGENCIADA]` en el histórico
+3. Se acumula en la lista de archivos para el correo final
+
+Si además corresponde un acta (Momento 2 o 3), también se genera y adjunta al mismo correo.
+
+## 9. Ejemplos de Ejecución
+
+**Ejecutar con la fecha actual (procesa todas las pendientes y envía correo):**
 ```bash
-python diligenciar.py --dry-run
+python scripts/diligenciar.py
 ```
 
-**Forzar una fecha específica:**
+**Ejecutar sin enviar correo:**
 ```bash
-python diligenciar.py --date 2026-07-08
+python scripts/diligenciar.py --no-email
 ```
 
-**Forzar el diligenciamiento del Acta Momento 2:**
+**Simular ejecución sin escribir archivos ni enviar correo:**
 ```bash
-python diligenciar.py --force-moment 2
+python scripts/diligenciar.py --dry-run
 ```
 
-**Combinar fecha y momento forzado:**
+**Forzar una fecha y acta específica:**
 ```bash
-python diligenciar.py --date 2026-10-08 --force-moment 3
+python scripts/diligenciar.py --date 2026-07-08 --force-moment 2
 ```
 
-## 8. Estructura de Carpetas de Salida
+**Combinar opciones:**
+```bash
+python scripts/diligenciar.py --date 2026-10-08 --force-moment 3 --no-email
+```
 
-Los archivos generados se organizan bajo `DocsOriginales/output/`:
+## 10. Estructura de Carpetas de Salida
+
+Los archivos generados se organizan bajo `output/` en la raíz del proyecto:
 
 ```
-DocsOriginales/output/
+output/
 ├── bitacora1-2026-04-08/
 │   ├── BitacoraMQuiazua1.xlsx
 │   └── ejecucion.log
@@ -190,7 +219,7 @@ DocsOriginales/output/
 - Si solo se procesa un acta (sin bitácora pendiente), se crea una carpeta independiente: `acta-momento<N>-<fecha>/`.
 - Cada carpeta incluye un archivo `ejecucion.log` con el resumen de la ejecución.
 
-## 9. Comportamiento ante Errores (Casos Edge)
+## 11. Comportamiento ante Errores (Casos Edge)
 
 | Situación | Comportamiento |
 |-----------|----------------|
@@ -198,31 +227,28 @@ DocsOriginales/output/
 | **No existe bloque JSON en `memory_descriptions.md`** | Lanza `ValueError` indicando que falta el bloque ` ```json ... ``` `. |
 | **No existe `historico_actividades.md`** | Lanza `FileNotFoundError`. |
 | **Todas las bitácoras están [DILIGENCIADA]** | Imprime mensaje informativo y continúa con el procesamiento de actas (si aplica). |
-| **Bitácora pendiente sin datos en `memory_descriptions.md`** | Imprime error informativo y no genera el Excel. |
+| **Bitácora pendiente sin datos en `memory_descriptions.md`** | Imprime error informativo, omite esa bitácora y continúa con las siguientes. |
 | **Más de 7 actividades en una bitácora** | Trunca a 7 actividades e imprime advertencia en consola. Las filas 40-53 del Excel son el límite físico. |
 | **Momento de acta inválido** (distinto de 2 o 3) | Imprime advertencia y omite el procesamiento de Word. |
 | **Plantilla original no encontrada** | Lanza `FileNotFoundError` para Excel o Word según corresponda. |
 | **Falta de permisos de escritura** | Error del sistema operativo al intentar guardar en `output/`. |
 
-## 10. Ejecución de Pruebas
+## 12. Ejecución de Pruebas
 
-El proyecto incluye una suite completa de pruebas unitarias y de integración en `test_diligenciar.py`.
-
-**Requisitos para ejecutar tests:**
-- Las plantillas originales (`BitacoraMQuiazua1.xlsx`, `Actas-Inicio-Medio-Final.docx`) deben existir en `DocsOriginales/`.
-- Los archivos de entrada (`historico_actividades.md`, `memory_descriptions.md`) deben existir.
+El proyecto incluye suites completas de pruebas unitarias y de integración.
 
 **Comando para ejecutar todas las pruebas:**
 ```bash
-python -m unittest test_diligenciar.py
+python -m unittest tests/test_diligenciar.py -v
+python -m unittest tests/test_email_module.py -v
 ```
 
-**Ejecutar con salida detallada (verbose):**
+**O ejecutar ambas suites:**
 ```bash
-python -m unittest test_diligenciar.py -v
+python -m unittest discover tests -v
 ```
 
-**Cobertura de tests:**
+**Cobertura de tests (diligenciar):**
 - `test_parse_memory_descriptions` — extracción correcta del JSON de memoria.
 - `test_get_next_undiligenced_bitacora` — detección de bitácora pendiente.
 - `test_mark_bitacora_as_diligenced` — marcado correcto de bitácora como diligenciada.
@@ -235,6 +261,17 @@ python -m unittest test_diligenciar.py -v
 - `test_calibri_9_application` — aplicación de tipografía Calibri 9pt.
 - `test_word_compromisos_mejora_momento_2` — inserción de compromisos en Tabla 3.
 - `test_word_compromisos_mejora_momento_3` — inserción de compromisos en Tabla 5.
+
+**Cobertura de tests (email):**
+- `test_construir_asunto_*` — formatos de asunto para 1, 2 o 3 bitácoras, con/sin acta.
+- `test_construir_cuerpo_*` — cuerpo del mensaje con saludo personalizado y listado de bitácoras.
+- `test_enviar_email_mock_smtp` — verificación de estructura del email enviado.
+- `test_enviar_email_reintentos_*` — reintentos automáticos ante fallos SMTP.
+- `test_cargar_variables_entorno` — verificación de carga de `.env`.
+
+## 13. Referencia para Agentes
+
+Ver `instrucciones/AGENTS.md` para las reglas de operación del agente líder y el workflow de descomposición de tareas.
 
 ---
 

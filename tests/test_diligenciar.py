@@ -1,4 +1,5 @@
 import os
+import sys
 import shutil
 import tempfile
 import unittest
@@ -9,7 +10,8 @@ import openpyxl
 import docx
 from docx.shared import Pt
 
-# Importar funciones desde diligenciar.py
+# Asegurar que scripts/ está en sys.path para importar diligenciar
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'scripts'))
 import diligenciar
 
 
@@ -21,6 +23,7 @@ class TestDiligenciarAutomation(unittest.TestCase):
         
         # Guardar caminos originales y redirigir los de diligenciar.py al directorio temporal
         self.original_work_dir = diligenciar.WORK_DIR
+        self.original_output_dir = diligenciar.OUTPUT_DIR
         self.original_excel_path = diligenciar.EXCEL_PATH
         self.original_template_path = diligenciar.TEMPLATE_EXCEL_PATH
         self.original_word_path = diligenciar.WORD_PATH
@@ -29,6 +32,7 @@ class TestDiligenciarAutomation(unittest.TestCase):
         self.original_memory_path = diligenciar.MEMORY_PATH
         
         diligenciar.WORK_DIR = self.test_dir
+        diligenciar.OUTPUT_DIR = os.path.join(self.test_dir, "output")
         diligenciar.EXCEL_PATH = os.path.join(self.test_dir, "BitacoraMQuiazua1.xlsx")
         diligenciar.TEMPLATE_EXCEL_PATH = os.path.join(self.test_dir, "BitacoraMQuiazua_template.xlsx")
         diligenciar.WORD_PATH = os.path.join(self.test_dir, "Actas-Inicio-Medio-Final.docx")
@@ -49,6 +53,7 @@ class TestDiligenciarAutomation(unittest.TestCase):
     def tearDown(self):
         # Restaurar caminos originales
         diligenciar.WORK_DIR = self.original_work_dir
+        diligenciar.OUTPUT_DIR = self.original_output_dir
         diligenciar.EXCEL_PATH = self.original_excel_path
         diligenciar.TEMPLATE_EXCEL_PATH = self.original_template_path
         diligenciar.WORD_PATH = self.original_word_path

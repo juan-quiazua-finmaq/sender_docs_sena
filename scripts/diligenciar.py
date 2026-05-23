@@ -13,7 +13,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Caminos absolutos a los archivos de trabajo
-WORK_DIR = "/home/eivorkinkest/Documentos/Docs_SENA/DocsOriginales"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+WORK_DIR = os.path.join(BASE_DIR, "contexto")
+OUTPUT_DIR = os.path.join(BASE_DIR, "output")
 EXCEL_PATH = os.path.join(WORK_DIR, "BitacoraMQuiazua1.xlsx")
 TEMPLATE_EXCEL_PATH = os.path.join(WORK_DIR, "BitacoraMQuiazua_template.xlsx")
 WORD_PATH = os.path.join(WORK_DIR, "Actas-Inicio-Medio-Final.docx")
@@ -65,6 +67,27 @@ def get_next_undiligenced_bitacora():
             if "[DILIGENCIADA]" not in line:
                 return bitacora_num
     return None
+
+
+def get_all_undiligenced_bitacoras():
+    """
+    Lee historico_actividades.md y retorna una lista con los números de todas
+    las bitácoras que no estén marcadas como [DILIGENCIADA].
+    """
+    if not os.path.exists(HISTORICO_PATH):
+        raise FileNotFoundError(f"No se encontró el histórico en {HISTORICO_PATH}")
+
+    with open(HISTORICO_PATH, 'r', encoding='utf-8') as f:
+        lines = f.readlines()
+
+    pendientes = []
+    for line in lines:
+        match = re.search(r"##\s*[Bb]itacora\s*numero\s*(\d+)", line)
+        if match:
+            bitacora_num = int(match.group(1))
+            if "[DILIGENCIADA]" not in line:
+                pendientes.append(bitacora_num)
+    return pendientes
 
 
 def mark_bitacora_as_diligenced(num):
@@ -142,7 +165,7 @@ def fill_excel_bitacora(bitacora_num, bitacora_data, execution_date, output_dir=
     # 2. Definir la carpeta de salida
     if output_dir is None:
         date_str = execution_date.strftime("%Y-%m-%d")
-        output_dir = os.path.join(WORK_DIR, "output", f"bitacora{bitacora_num}-{date_str}")
+        output_dir = os.path.join(OUTPUT_DIR, f"bitacora{bitacora_num}-{date_str}")
     os.makedirs(output_dir, exist_ok=True)
 
     # 3. Definir el archivo de salida
@@ -257,7 +280,7 @@ def process_word_actas(moment, actas_data, execution_date_str, output_dir=None):
 
     # --- Determinar ruta de salida ---
     if output_dir is None:
-        output_dir = os.path.join(WORK_DIR, "output")
+        output_dir = os.path.join(OUTPUT_DIR, "actas")
     os.makedirs(output_dir, exist_ok=True)
     output_word_path = os.path.join(output_dir, "Actas-Inicio-Medio-Final.docx")
 
@@ -370,15 +393,15 @@ def main():
     parser.add_argument("--date", type=str, default=None, help="Forzar fecha de ejecución (YYYY-MM-DD).")
     parser.add_argument("--force-moment", type=int, choices=[2, 3], default=None, help="Forzar el diligenciamiento de un acta (Word).")
     parser.add_argument("--dry-run", action="store_true", help="Analizar markdown y memoria sin escribir archivos.")
+    parser.add_argument("--no-email", action="store_true", help="No enviar correo electrónico al finalizar.")
     args = parser.parse_args()
 
-    # Preguntar autorización de email
-    send_email = False
-    if not args.dry_run:
-        from email_module import preguntar_envio_email
-        send_email = preguntar_envio_email()
-    else:
-        print("[Dry Run] Se preguntaría si desea enviar correo electrónico al finalizar.")
+    # Decidir envío de email: por defecto se envía, a menos que se indique --no-email o --dry-run
+    send_email = not args.no_email and not args.dry_run
+    if args.dry_run:
+        print("[Dry Run] No se enviará correo electrónico (modo simulación).")
+    elif args.no_email:
+        print("[Email] Envío de correo desactivado por --no-email.")
 
     # 1. Resolver fecha de ejecución
     if args.date:
@@ -391,40 +414,51 @@ def main():
 
     print(f"=== INICIANDO AUTOMATIZACIÓN SENA ===")
     print(f"Fecha de ejecución: {exec_date} ({exec_date_str})")
+    print(f"Modo email: {'HABILITADO' if send_email else 'DESHABILITADO'}")
 
     # 2. Leer archivos de entrada
     memory_data = parse_memory_descriptions()
 
-    # 3. Encontrar la siguiente bitácora pendiente en el markdown
-    pending_num = get_next_undiligenced_bitacora()
-    if pending_num is None:
+    # 3. Encontrar TODAS las bitácoras pendientes (procesamiento por lote)
+    pending_nums = get_all_undiligenced_bitacoras()
+    all_generated_files = []
+    last_bitacora_data = None
+    bitacora_output_dir = None
+
+    if not pending_nums:
         print("[Estado] No hay más bitácoras pendientes en historico_actividades.md.")
     else:
-        print(f"[Estado] Bitácora pendiente identificada: Número {pending_num}")
+        print(f"[Estado] Bitácoras pendientes identificadas: {pending_nums}")
+
+    for pending_num in pending_nums:
+        print(f"\n--- Procesando Bitácora {pending_num} ---")
 
         bitacora_data = None
         for b in memory_data['bitacoras']:
             if b['numero'] == pending_num:
                 bitacora_data = b
+                last_bitacora_data = b
                 break
 
         if bitacora_data is None:
             print(f"[Error] No se encontraron datos para la Bitácora {pending_num} en memory_descriptions.md!")
+            continue
+
+        if args.dry_run:
+            print(f"[Dry Run] Se procesaría la Bitácora {pending_num} período {bitacora_data['fecha_inicio']} - {bitacora_data['fecha_fin']}.")
         else:
-            if args.dry_run:
-                print(f"[Dry Run] Se procesaría la Bitácora {pending_num} período {bitacora_data['fecha_inicio']} - {bitacora_data['fecha_fin']}.")
-            else:
-                # Determinar carpeta de salida para bitácora
-                bitacora_output_dir = os.path.join(
-                    WORK_DIR, "output", f"bitacora{pending_num}-{exec_date_folder}"
-                )
-                os.makedirs(bitacora_output_dir, exist_ok=True)
+            # Determinar carpeta de salida para bitácora
+            bitacora_output_dir = os.path.join(
+                OUTPUT_DIR, f"bitacora{pending_num}-{exec_date_folder}"
+            )
+            os.makedirs(bitacora_output_dir, exist_ok=True)
 
-                # Rellenar Excel
-                excel_path = fill_excel_bitacora(pending_num, bitacora_data, exec_date, output_dir=bitacora_output_dir)
+            # Rellenar Excel
+            excel_path = fill_excel_bitacora(pending_num, bitacora_data, exec_date, output_dir=bitacora_output_dir)
+            all_generated_files.append(excel_path)
 
-                # Marcar en markdown
-                mark_bitacora_as_diligenced(pending_num)
+            # Marcar en markdown
+            mark_bitacora_as_diligenced(pending_num)
 
     # 4. Procesar actas de Word
     target_moment = None
@@ -442,27 +476,30 @@ def main():
         elif diff_m3 <= 7:
             target_moment = 3
 
+    word_path = None
+    word_output_dir = None
     if target_moment:
         if args.dry_run:
             print(f"[Dry Run] Se diligenciaría el Acta de Word para el Momento {target_moment}.")
         else:
             # Determinar carpeta de salida para Word
-            if pending_num is not None and bitacora_data is not None:
-                # Si también hay bitácora, reusar la misma carpeta
+            if pending_nums and last_bitacora_data is not None:
+                # Si también hay bitácora, reusar la última carpeta de bitácora
                 word_output_dir = bitacora_output_dir
             else:
                 # Carpeta independiente para Word
                 word_output_dir = os.path.join(
-                    WORK_DIR, "output", f"acta-momento{target_moment}-{exec_date_folder}"
+                    OUTPUT_DIR, f"acta-momento{target_moment}-{exec_date_folder}"
                 )
                 os.makedirs(word_output_dir, exist_ok=True)
 
             word_path = process_word_actas(target_moment, memory_data, exec_date_str, output_dir=word_output_dir)
+            all_generated_files.append(word_path)
 
     # 5. Escribir archivo de log en la carpeta de salida correspondiente
-    if pending_num is not None and bitacora_data is not None:
+    if pending_nums and last_bitacora_data is not None:
         log_dir = bitacora_output_dir
-    elif target_moment and not args.dry_run:
+    elif target_moment and word_output_dir and not args.dry_run:
         log_dir = word_output_dir
     else:
         log_dir = None
@@ -471,15 +508,16 @@ def main():
         log_path = os.path.join(log_dir, "ejecucion.log")
         with open(log_path, 'w', encoding='utf-8') as f:
             f.write(f"Fecha de ejecución: {exec_date} ({exec_date_str})\n")
-            f.write(f"Bitácora procesada: {pending_num if pending_num else 'N/A'}\n")
-            if pending_num and bitacora_data:
-                f.write(f"Período: {bitacora_data['fecha_inicio']} - {bitacora_data['fecha_fin']}\n")
-                f.write(f"Actividades: {len(bitacora_data['actividades'])}\n")
+            f.write(f"Bitácoras procesadas: {pending_nums if pending_nums else 'Ninguna'}\n")
+            if pending_nums and last_bitacora_data:
+                primera = memory_data['bitacoras'][0]
+                ultima = last_bitacora_data
+                f.write(f"Período total: {primera['fecha_inicio']} - {ultima['fecha_fin']}\n")
             f.write(f"Acta Word Momento: {target_moment if target_moment else 'N/A'}\n")
             f.write(f"Estado: COMPLETADO\n")
         print(f"[Log] Resumen guardado en {log_path}")
 
-    # 6. Envío de email si autorizado
+    # 6. Envío de email si está habilitado
     if send_email and not args.dry_run:
         from email_module import (
             enviar_email,
@@ -499,23 +537,24 @@ def main():
             )
         cc = os.getenv("EMAIL_CC", "eivorkinkest@gmail.com")
 
-        fecha_inicio = (
-            bitacora_data.get("fecha_inicio", "") if bitacora_data else ""
-        )
-        fecha_fin = (
-            bitacora_data.get("fecha_fin", "") if bitacora_data else ""
-        )
+        # Recopilar todos los archivos generados (xlsx, docx) desde los directorios de salida
+        adjuntos = all_generated_files[:]
+
+        # Construir lista de bitácoras procesadas con sus períodos
+        bitacoras_info = []
+        if pending_nums:
+            for b in memory_data['bitacoras']:
+                if b['numero'] in pending_nums:
+                    bitacoras_info.append({
+                        'numero': b['numero'],
+                        'fecha_inicio': b['fecha_inicio'],
+                        'fecha_fin': b['fecha_fin'],
+                    })
 
         asunto = construir_asunto(
-            pending_num, fecha_inicio, fecha_fin, target_moment
+            bitacoras_info, target_moment
         )
-        cuerpo = construir_cuerpo(fecha_inicio, fecha_fin, target_moment)
-
-        adjuntos = []
-        if log_dir and os.path.exists(log_dir):
-            for fname in os.listdir(log_dir):
-                if fname.endswith((".xlsx", ".docx")):
-                    adjuntos.append(os.path.join(log_dir, fname))
+        cuerpo = construir_cuerpo(bitacoras_info, target_moment)
 
         exito, mensaje = enviar_email(
             destinatario=destinatario,
@@ -531,7 +570,7 @@ def main():
         else:
             print(f"[Email] {mensaje}")
             if log_dir:
-                reintentar_envio_manual(pending_num, log_dir)
+                reintentar_envio_manual(bitacoras_info, log_dir, adjuntos)
 
     elif send_email and args.dry_run:
         print(

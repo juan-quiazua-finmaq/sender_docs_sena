@@ -13,37 +13,71 @@ SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
 
 
-def construir_asunto(bitacora_num, fecha_inicio, fecha_fin, acta_moment=None):
-    """Construye el asunto dinámico según los documentos generados."""
-    if bitacora_num is not None and acta_moment is not None:
-        return (
-            f"Bitácora {bitacora_num} y Acta Momento {acta_moment}"
-            f" - Período {fecha_inicio} al {fecha_fin}"
-        )
-    elif bitacora_num is not None:
-        return f"Bitácora {bitacora_num} - Período {fecha_inicio} al {fecha_fin}"
+def construir_asunto(bitacoras_info, acta_moment=None):
+    """Construye el asunto dinámico según los documentos generados.
+
+    Args:
+        bitacoras_info: Lista de diccionarios con 'numero', 'fecha_inicio', 'fecha_fin'.
+        acta_moment: Número de momento de acta (2 o 3), opcional.
+
+    Returns:
+        str: Asunto del correo.
+    """
+    if bitacoras_info:
+        numeros = [str(b['numero']) for b in bitacoras_info]
+        if len(numeros) == 1:
+            numeros_str = numeros[0]
+        elif len(numeros) == 2:
+            numeros_str = f"{numeros[0]} y {numeros[1]}"
+        else:
+            numeros_str = ", ".join(numeros[:-1]) + f" y {numeros[-1]}"
+
+        fecha_inicio = bitacoras_info[0]['fecha_inicio']
+        fecha_fin = bitacoras_info[-1]['fecha_fin']
+
+        if acta_moment is not None:
+            return (
+                f"Bitácoras {numeros_str} y Acta Momento {acta_moment}"
+                f" — Período {fecha_inicio} al {fecha_fin}"
+            )
+        else:
+            return f"Bitácoras {numeros_str} — Período {fecha_inicio} al {fecha_fin}"
     elif acta_moment is not None:
         return f"Acta Momento {acta_moment}"
     else:
         return "Documentos SENA - Automatización"
 
 
-def construir_cuerpo(fecha_inicio, fecha_fin, acta_moment=None):
-    """Construye el cuerpo del email según la plantilla estandarizada."""
-    cuerpo = f"Estimado instructor,\n\n"
+def construir_cuerpo(bitacoras_info, acta_moment=None):
+    """Construye el cuerpo del email con redacción cordial y signos de puntuación correctos.
+
+    Args:
+        bitacoras_info: Lista de diccionarios con 'numero', 'fecha_inicio', 'fecha_fin'.
+        acta_moment: Número de momento de acta (2 o 3), opcional.
+
+    Returns:
+        str: Cuerpo del mensaje en texto plano.
+    """
+    cuerpo = "Estimado instructor Oscar Ivan Ospina Ospina,\n\n"
     cuerpo += (
-        f"Aquí está la bitácora referente al período {fecha_inicio} al {fecha_fin}."
+        "Reciba un cordial saludo. Por medio del presente correo, hago entrega de las "
+        "bitácoras correspondientes a mi etapa productiva, las cuales detallo a continuación:\n\n"
     )
+
+    for b in bitacoras_info:
+        cuerpo += f"- Bitácora {b['numero']} ({b['fecha_inicio']} al {b['fecha_fin']})\n"
+
     if acta_moment is not None:
         cuerpo += (
-            f"\n\nAdjunto también el acta correspondiente al Momento {acta_moment}."
+            f"\nAdjunto también el acta correspondiente al Momento {acta_moment} (si aplica).\n"
         )
+
     cuerpo += (
-        "\n\nNos gustaría saber si para la próxima semana o esta tiene"
-        " disponibilidad para las correspondientes visitas."
+        "\nNos gustaría saber si para la próxima semana o esta tiene disponibilidad "
+        "para las correspondientes visitas.\n"
     )
-    cuerpo += "\n\nNo siendo más, agradecemos su tiempo."
-    cuerpo += "\n\nCordialmente,\nManuel Quiazua y Finmaq"
+    cuerpo += "\nNo siendo más, agradecemos su tiempo y atención.\n"
+    cuerpo += "\nCordialmente,\nManuel Quiazua y Finmaq"
     return cuerpo
 
 
@@ -136,24 +170,29 @@ def enviar_email(destinatario, cc, asunto, cuerpo, adjuntos, intentos=3):
     return False, "Error desconocido al enviar correo"
 
 
-def reintentar_envio_manual(bitacora_num, output_dir):
-    """Ofrece reintento manual tras fallos automáticos.
+def reintentar_envio_manual(bitacoras_info, output_dir, adjuntos=None):
+    """Ofrece reintento manual tras fallos automáticos (versión por lote).
 
     Pregunta al usuario, resuelve destinatario desde .env y
     reenvía con los archivos del directorio de salida.
 
     Args:
-        bitacora_num: Número de bitácora para el reintento.
+        bitacoras_info: Lista de diccionarios con 'numero', 'fecha_inicio', 'fecha_fin'.
         output_dir: Directorio donde están los archivos generados.
+        adjuntos: Lista de rutas de archivos a adjuntar (opcional).
 
     Returns:
         bool: True si el reintento fue exitoso, False en caso contrario.
     """
     import glob
 
+    cant = len(bitacoras_info)
+    numeros = [str(b['numero']) for b in bitacoras_info]
+    numeros_str = ", ".join(numeros)
+
     respuesta = input(
         f"\n¿Desea reintentar el envío del correo"
-        f" para la Bitácora {bitacora_num}? (s/n): "
+        f" para las {cant} bitácora(s) {numeros_str}? (s/n): "
     )
     if respuesta.lower() not in ["s", "si", "sí", "y", "yes"]:
         print("[Email] Reintento manual cancelado por el usuario.")
@@ -170,14 +209,15 @@ def reintentar_envio_manual(bitacora_num, output_dir):
         )
     cc = os.getenv("EMAIL_CC", "eivorkinkest@gmail.com")
 
-    adjuntos = []
-    for ext in ["*.xlsx", "*.docx"]:
-        adjuntos.extend(glob.glob(os.path.join(output_dir, ext)))
+    if adjuntos is None:
+        adjuntos = []
+        for ext in ["*.xlsx", "*.docx"]:
+            adjuntos.extend(glob.glob(os.path.join(output_dir, ext)))
 
-    asunto = f"Reintento - Bitácora {bitacora_num}"
+    asunto = construir_asunto(bitacoras_info)
     cuerpo = "Documentos adjuntos correspondientes a la automatización SENA."
 
-    print(f"[Email] Reintentando envío para Bitácora {bitacora_num}...")
+    print(f"[Email] Reintentando envío para {cant} bitácora(s) {numeros_str}...")
     exito, mensaje = enviar_email(
         destinatario=destinatario,
         cc=cc,
@@ -193,16 +233,3 @@ def reintentar_envio_manual(bitacora_num, output_dir):
         print(f"[Email] {mensaje}")
 
     return exito
-
-
-def preguntar_envio_email():
-    """Pregunta interactiva al usuario si desea enviar correo al finalizar.
-
-    Returns:
-        bool: True si el usuario autoriza el envío, False en caso contrario.
-    """
-    respuesta = input(
-        "\n¿Desea enviar por correo electrónico"
-        " los documentos generados al finalizar? (s/n): "
-    )
-    return respuesta.lower() in ["s", "si", "sí", "y", "yes"]

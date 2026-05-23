@@ -1,12 +1,13 @@
 """
 Pruebas unitarias para email_module.py
 
-Cubre: construir_asunto, construir_cuerpo, enviar_email (mock SMTP),
-       reintentos automáticos, preguntar_envio_email y carga de .env.
+Cubre: construir_asunto (nueva firma con lista), construir_cuerpo (nueva firma),
+       enviar_email (mock SMTP), reintentos automáticos, reintentar_envio_manual,
+       y carga de .env.
 
 Autor: Tester Agent
 Fecha: 2026-05-23
-Sesión: session_003
+Sesión: session_004
 """
 
 import unittest
@@ -15,81 +16,114 @@ import smtplib
 import os
 import sys
 
-# Asegurar que el directorio del proyecto está en sys.path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Asegurar que scripts/ está en sys.path para importar email_module
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'scripts'))
 
 import email_module
 
 
 class TestConstruirAsunto(unittest.TestCase):
-    """Tests para la función construir_asunto()."""
+    """Tests para la función construir_asunto() con nueva firma por lote."""
 
-    def test_construir_asunto_solo_bitacora(self):
-        """Verifica el formato del asunto cuando solo hay bitácora."""
-        resultado = email_module.construir_asunto(
-            bitacora_num=3,
-            fecha_inicio="2026-05-01",
-            fecha_fin="2026-05-15",
-            acta_moment=None,
-        )
-        esperado = "Bitácora 3 - Período 2026-05-01 al 2026-05-15"
+    def test_construir_asunto_una_bitacora(self):
+        """Verifica el formato del asunto con una sola bitácora."""
+        bitacoras_info = [
+            {'numero': 3, 'fecha_inicio': '01/05/2026', 'fecha_fin': '15/05/2026'},
+        ]
+        resultado = email_module.construir_asunto(bitacoras_info, acta_moment=None)
+        esperado = "Bitácoras 3 — Período 01/05/2026 al 15/05/2026"
         self.assertEqual(resultado, esperado)
 
-    def test_construir_asunto_bitacora_y_acta(self):
-        """Verifica el formato del asunto con bitácora y acta."""
-        resultado = email_module.construir_asunto(
-            bitacora_num=5,
-            fecha_inicio="2026-05-01",
-            fecha_fin="2026-05-15",
-            acta_moment=2,
-        )
+    def test_construir_asunto_dos_bitacoras(self):
+        """Verifica el formato del asunto con dos bitácoras."""
+        bitacoras_info = [
+            {'numero': 1, 'fecha_inicio': '01/04/2026', 'fecha_fin': '15/04/2026'},
+            {'numero': 2, 'fecha_inicio': '16/04/2026', 'fecha_fin': '30/04/2026'},
+        ]
+        resultado = email_module.construir_asunto(bitacoras_info, acta_moment=None)
+        esperado = "Bitácoras 1 y 2 — Período 01/04/2026 al 30/04/2026"
+        self.assertEqual(resultado, esperado)
+
+    def test_construir_asunto_tres_bitacoras(self):
+        """Verifica el formato del asunto con tres bitácoras."""
+        bitacoras_info = [
+            {'numero': 1, 'fecha_inicio': '01/04/2026', 'fecha_fin': '15/04/2026'},
+            {'numero': 2, 'fecha_inicio': '16/04/2026', 'fecha_fin': '30/04/2026'},
+            {'numero': 3, 'fecha_inicio': '01/05/2026', 'fecha_fin': '15/05/2026'},
+        ]
+        resultado = email_module.construir_asunto(bitacoras_info, acta_moment=None)
+        esperado = "Bitácoras 1, 2 y 3 — Período 01/04/2026 al 15/05/2026"
+        self.assertEqual(resultado, esperado)
+
+    def test_construir_asunto_bitacoras_y_acta(self):
+        """Verifica el asunto con bitácoras y acta."""
+        bitacoras_info = [
+            {'numero': 1, 'fecha_inicio': '01/04/2026', 'fecha_fin': '15/04/2026'},
+            {'numero': 2, 'fecha_inicio': '16/04/2026', 'fecha_fin': '30/04/2026'},
+        ]
+        resultado = email_module.construir_asunto(bitacoras_info, acta_moment=2)
         esperado = (
-            "Bitácora 5 y Acta Momento 2"
-            " - Período 2026-05-01 al 2026-05-15"
+            "Bitácoras 1 y 2 y Acta Momento 2"
+            " — Período 01/04/2026 al 30/04/2026"
         )
         self.assertEqual(resultado, esperado)
 
     def test_construir_asunto_solo_acta(self):
         """Verifica el formato del asunto cuando solo hay acta."""
-        resultado = email_module.construir_asunto(
-            bitacora_num=None,
-            fecha_inicio="2026-05-01",
-            fecha_fin="2026-05-15",
-            acta_moment=3,
-        )
+        resultado = email_module.construir_asunto([], acta_moment=3)
         esperado = "Acta Momento 3"
+        self.assertEqual(resultado, esperado)
+
+    def test_construir_asunto_vacio(self):
+        """Verifica el asunto cuando no hay bitácoras ni acta."""
+        resultado = email_module.construir_asunto([], acta_moment=None)
+        esperado = "Documentos SENA - Automatización"
         self.assertEqual(resultado, esperado)
 
 
 class TestConstruirCuerpo(unittest.TestCase):
-    """Tests para la función construir_cuerpo()."""
+    """Tests para la función construir_cuerpo() con nueva firma por lote."""
 
-    def test_construir_cuerpo_solo_bitacora(self):
-        """Verifica el cuerpo del mensaje cuando no hay acta."""
-        resultado = email_module.construir_cuerpo(
-            fecha_inicio="2026-05-01",
-            fecha_fin="2026-05-15",
-            acta_moment=None,
-        )
-        # Debe contener la referencia a la bitácora
-        self.assertIn("Estimado instructor", resultado)
-        self.assertIn("2026-05-01", resultado)
-        self.assertIn("2026-05-15", resultado)
+    def test_construir_cuerpo_una_bitacora(self):
+        """Verifica el cuerpo del mensaje con una bitácora."""
+        bitacoras_info = [
+            {'numero': 3, 'fecha_inicio': '01/05/2026', 'fecha_fin': '15/05/2026'},
+        ]
+        resultado = email_module.construir_cuerpo(bitacoras_info, acta_moment=None)
+        # Debe contener el nuevo saludo personalizado
+        self.assertIn("Estimado instructor Oscar Ivan Ospina Ospina", resultado)
+        self.assertIn("01/05/2026", resultado)
+        self.assertIn("15/05/2026", resultado)
         self.assertIn("Cordialmente", resultado)
         self.assertIn("Manuel Quiazua y Finmaq", resultado)
+        # Debe listar la bitácora en formato Opción B
+        self.assertIn("- Bitácora 3", resultado)
         # NO debe contener referencia al acta
         self.assertNotIn("acta correspondiente", resultado.lower())
 
+    def test_construir_cuerpo_varias_bitacoras(self):
+        """Verifica el cuerpo del mensaje con varias bitácoras."""
+        bitacoras_info = [
+            {'numero': 1, 'fecha_inicio': '08/04/2026', 'fecha_fin': '22/04/2026'},
+            {'numero': 2, 'fecha_inicio': '22/04/2026', 'fecha_fin': '06/05/2026'},
+            {'numero': 3, 'fecha_inicio': '06/05/2026', 'fecha_fin': '20/05/2026'},
+        ]
+        resultado = email_module.construir_cuerpo(bitacoras_info, acta_moment=None)
+        # Debe listar cada bitácora
+        self.assertIn("- Bitácora 1 (08/04/2026 al 22/04/2026)", resultado)
+        self.assertIn("- Bitácora 2 (22/04/2026 al 06/05/2026)", resultado)
+        self.assertIn("- Bitácora 3 (06/05/2026 al 20/05/2026)", resultado)
+        self.assertIn("Reciba un cordial saludo", resultado)
+
     def test_construir_cuerpo_con_acta(self):
         """Verifica el cuerpo del mensaje cuando hay acta incluida."""
-        resultado = email_module.construir_cuerpo(
-            fecha_inicio="2026-05-01",
-            fecha_fin="2026-05-15",
-            acta_moment=2,
-        )
-        self.assertIn("Estimado instructor", resultado)
-        self.assertIn("2026-05-01", resultado)
-        self.assertIn("2026-05-15", resultado)
+        bitacoras_info = [
+            {'numero': 1, 'fecha_inicio': '08/04/2026', 'fecha_fin': '22/04/2026'},
+        ]
+        resultado = email_module.construir_cuerpo(bitacoras_info, acta_moment=2)
+        self.assertIn("Estimado instructor Oscar Ivan Ospina Ospina", resultado)
+        self.assertIn("08/04/2026", resultado)
+        self.assertIn("22/04/2026", resultado)
         # DEBE contener referencia al acta
         self.assertIn("acta correspondiente al Momento 2", resultado)
         self.assertIn("Cordialmente", resultado)
@@ -243,52 +277,18 @@ class TestEnviarEmailReintentos(unittest.TestCase):
         self.assertEqual(mock_smtp_class.call_count, 3)
 
 
-class TestPreguntarEnvioEmail(unittest.TestCase):
-    """Tests para preguntar_envio_email() con mock de input()."""
-
-    @patch("builtins.input", return_value="s")
-    def test_preguntar_envio_email_si(self, mock_input):
-        """Verifica que 's' retorna True."""
-        resultado = email_module.preguntar_envio_email()
-        self.assertTrue(resultado)
-        mock_input.assert_called_once()
-
-    @patch("builtins.input", return_value="n")
-    def test_preguntar_envio_email_no(self, mock_input):
-        """Verifica que 'n' retorna False."""
-        resultado = email_module.preguntar_envio_email()
-        self.assertFalse(resultado)
-        mock_input.assert_called_once()
-
-    @patch("builtins.input", return_value="sí")
-    def test_preguntar_envio_email_sí_con_acento(self, mock_input):
-        """Verifica que 'sí' (con acento) también retorna True."""
-        resultado = email_module.preguntar_envio_email()
-        self.assertTrue(resultado)
-
-    @patch("builtins.input", return_value="SI")
-    def test_preguntar_envio_email_mayusculas(self, mock_input):
-        """Verifica que 'SI' en mayúsculas retorna True."""
-        resultado = email_module.preguntar_envio_email()
-        self.assertTrue(resultado)
-
-
 class TestCargarVariablesEntorno(unittest.TestCase):
     """Tests para verificar que .env se carga correctamente."""
 
     def test_cargar_variables_entorno(self):
         """Verifica que las variables de entorno se cargan desde .env."""
-        # El módulo ya hizo load_dotenv() al importarse.
-        # Verificar que las variables están definidas (pueden venir de
-        # .env o del entorno del sistema).
-        # Usamos os.getenv para no fallar si .env no existe en CI.
         gmail_sender = os.getenv("GMAIL_SENDER")
         gmail_password = os.getenv("GMAIL_APP_PASSWORD")
         email_cc = os.getenv("EMAIL_CC")
         email_modo = os.getenv("EMAIL_MODO")
 
-        # Si .env existe y fue cargado, estas variables deben tener valor
-        env_path = os.path.join(os.path.dirname(__file__), ".env")
+        # Buscar .env en la raíz del proyecto
+        env_path = os.path.join(os.path.dirname(__file__), '..', ".env")
         if os.path.exists(env_path):
             self.assertIsNotNone(gmail_sender, "GMAIL_SENDER no cargada")
             self.assertIsNotNone(gmail_password, "GMAIL_APP_PASSWORD no cargada")
