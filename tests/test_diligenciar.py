@@ -25,18 +25,22 @@ class TestDiligenciarAutomation(unittest.TestCase):
         self.original_work_dir = diligenciar.WORK_DIR
         self.original_output_dir = diligenciar.OUTPUT_DIR
         self.original_excel_path = diligenciar.EXCEL_PATH
-        self.original_template_path = diligenciar.TEMPLATE_EXCEL_PATH
+        self.original_template_excel_path = diligenciar.TEMPLATE_EXCEL_PATH
         self.original_word_path = diligenciar.WORD_PATH
         self.original_template_word_path = diligenciar.TEMPLATE_WORD_PATH
         self.original_historico_path = diligenciar.HISTORICO_PATH
         self.original_memory_path = diligenciar.MEMORY_PATH
         
+        # Las plantillas ahora están en contexto/plantillas/ con nombres simplificados
+        plantillas_dir = os.path.join(self.test_dir, "plantillas")
+        os.makedirs(plantillas_dir, exist_ok=True)
+        
         diligenciar.WORK_DIR = self.test_dir
         diligenciar.OUTPUT_DIR = os.path.join(self.test_dir, "output")
-        diligenciar.EXCEL_PATH = os.path.join(self.test_dir, "BitacoraMQuiazua1.xlsx")
-        diligenciar.TEMPLATE_EXCEL_PATH = os.path.join(self.test_dir, "BitacoraMQuiazua_template.xlsx")
-        diligenciar.WORD_PATH = os.path.join(self.test_dir, "Actas-Inicio-Medio-Final.docx")
-        diligenciar.TEMPLATE_WORD_PATH = os.path.join(self.test_dir, "Actas-Inicio-Medio-Final_template.docx")
+        diligenciar.EXCEL_PATH = os.path.join(plantillas_dir, "bitacoras.xlsx")
+        diligenciar.TEMPLATE_EXCEL_PATH = os.path.join(plantillas_dir, "bitacoras.xlsx")
+        diligenciar.WORD_PATH = os.path.join(plantillas_dir, "actas.docx")
+        diligenciar.TEMPLATE_WORD_PATH = os.path.join(plantillas_dir, "actas.docx")
         diligenciar.HISTORICO_PATH = os.path.join(self.test_dir, "historico_actividades.md")
         diligenciar.MEMORY_PATH = os.path.join(self.test_dir, "memory_descriptions.md")
         
@@ -55,7 +59,7 @@ class TestDiligenciarAutomation(unittest.TestCase):
         diligenciar.WORK_DIR = self.original_work_dir
         diligenciar.OUTPUT_DIR = self.original_output_dir
         diligenciar.EXCEL_PATH = self.original_excel_path
-        diligenciar.TEMPLATE_EXCEL_PATH = self.original_template_path
+        diligenciar.TEMPLATE_EXCEL_PATH = self.original_template_excel_path
         diligenciar.WORD_PATH = self.original_word_path
         diligenciar.TEMPLATE_WORD_PATH = self.original_template_word_path
         diligenciar.HISTORICO_PATH = self.original_historico_path
@@ -368,29 +372,40 @@ class TestDiligenciarAutomation(unittest.TestCase):
     # NUEVOS TESTS (Refactor v2)
     # =========================================================================
 
-    def test_word_template_backup(self):
+    def test_word_template_not_modified(self):
         """
-        Verifica que se crea Actas-Inicio-Medio-Final_template.docx como respaldo
-        al ejecutar process_word_actas por primera vez.
+        Verifica que la plantilla original (actas.docx) NO se modifica
+        después de ejecutar process_word_actas. El sistema debe copiar
+        la plantilla al directorio de output sin tocar el original.
         """
         memory_data = diligenciar.parse_memory_descriptions()
         exec_date_str = "08/07/2026"
         
-        # Verificar que el template NO existe antes de ejecutar
-        self.assertFalse(os.path.exists(diligenciar.TEMPLATE_WORD_PATH),
-                         "El template Word no debe existir antes de la primera ejecución")
+        # Capturar hash del archivo plantilla ANTES de ejecutar
+        import hashlib
+        with open(diligenciar.TEMPLATE_WORD_PATH, 'rb') as f:
+            hash_before = hashlib.sha256(f.read()).hexdigest()
         
-        # Ejecutar Momento 2 (crea el template como efecto secundario)
-        diligenciar.process_word_actas(2, memory_data, exec_date_str)
+        # Ejecutar Momento 2
+        out_path = diligenciar.process_word_actas(2, memory_data, exec_date_str)
         
-        # Verificar que el template SE CREÓ
-        self.assertTrue(os.path.exists(diligenciar.TEMPLATE_WORD_PATH),
-                        "Actas-Inicio-Medio-Final_template.docx debe ser creado como respaldo")
+        # Verificar que el archivo de salida se creó en el directorio de output
+        self.assertTrue(os.path.exists(out_path),
+                        "El archivo de salida debe existir")
+        self.assertIn("output", out_path,
+                      "El archivo de salida debe estar en el directorio de output")
         
-        # Verificar que el template es un archivo Word válido
-        doc_template = docx.Document(diligenciar.TEMPLATE_WORD_PATH)
-        self.assertGreater(len(doc_template.tables), 0,
-                           "El template debe contener tablas")
+        # Verificar que la plantilla original NO fue modificada
+        with open(diligenciar.TEMPLATE_WORD_PATH, 'rb') as f:
+            hash_after = hashlib.sha256(f.read()).hexdigest()
+        
+        self.assertEqual(hash_before, hash_after,
+                         "La plantilla original NO debe ser modificada tras la ejecución")
+        
+        # Verificar que el archivo de salida es un documento Word válido
+        doc_out = docx.Document(out_path)
+        self.assertGreater(len(doc_out.tables), 0,
+                           "El archivo de salida debe contener tablas")
 
     def test_output_folder_creation(self):
         """

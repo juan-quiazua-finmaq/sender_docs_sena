@@ -1,0 +1,13 @@
+[project]
+name = "docs-sena"
+version = "0.1.0"
+description = "Automatización de documentos SENA (bitácoras y actas)"
+requires-python = ">=3.10"
+dependencies = [
+    "openpyxl>=3.0.0",
+    "python-docx>=0.8.0",
+    "python-dotenv>=1.0.0",
+]
+
+[dependency-groups]
+dev = []

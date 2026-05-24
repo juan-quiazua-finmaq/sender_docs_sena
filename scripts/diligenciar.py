@@ -1,9 +1,9 @@
 import os
-import shutil
 import json
 import datetime
 import argparse
 import re
+import shutil
 import openpyxl
 from openpyxl.styles import Alignment, Border, Side, PatternFill, Font
 import docx
@@ -16,10 +16,11 @@ load_dotenv()
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WORK_DIR = os.path.join(BASE_DIR, "contexto")
 OUTPUT_DIR = os.path.join(BASE_DIR, "output")
-EXCEL_PATH = os.path.join(WORK_DIR, "BitacoraMQuiazua1.xlsx")
-TEMPLATE_EXCEL_PATH = os.path.join(WORK_DIR, "BitacoraMQuiazua_template.xlsx")
-WORD_PATH = os.path.join(WORK_DIR, "Actas-Inicio-Medio-Final.docx")
-TEMPLATE_WORD_PATH = os.path.join(WORK_DIR, "Actas-Inicio-Medio-Final_template.docx")
+PLANTILLAS_DIR = os.path.join(WORK_DIR, "plantillas")
+EXCEL_PATH = os.path.join(PLANTILLAS_DIR, "bitacoras.xlsx")
+TEMPLATE_EXCEL_PATH = os.path.join(PLANTILLAS_DIR, "bitacoras.xlsx")
+WORD_PATH = os.path.join(PLANTILLAS_DIR, "actas.docx")
+TEMPLATE_WORD_PATH = os.path.join(PLANTILLAS_DIR, "actas.docx")
 HISTORICO_PATH = os.path.join(WORK_DIR, "historico_actividades.md")
 MEMORY_PATH = os.path.join(WORK_DIR, "memory_descriptions.md")
 
@@ -151,31 +152,23 @@ def copy_style(src_cell, dest_cell):
 def fill_excel_bitacora(bitacora_num, bitacora_data, execution_date, output_dir=None):
     """
     Rellena la bitácora en Excel usando openpyxl.
-    Respalda la plantilla original si no se ha hecho aún, y guarda el resultado.
     Cada actividad ocupa 2 filas con merge vertical en B, C, D, E, F.
     Máximo 7 actividades (filas 40-53).
     """
-    # 1. Asegurar el respaldo de la plantilla limpia
-    if not os.path.exists(TEMPLATE_EXCEL_PATH):
-        if not os.path.exists(EXCEL_PATH):
-            raise FileNotFoundError(f"No se encontró la plantilla original en {EXCEL_PATH}")
-        shutil.copy2(EXCEL_PATH, TEMPLATE_EXCEL_PATH)
-        print(f"[Template] Respaldo de plantilla creado en {TEMPLATE_EXCEL_PATH}")
-
-    # 2. Definir la carpeta de salida
+    # 1. Definir la carpeta de salida
     if output_dir is None:
         date_str = execution_date.strftime("%Y-%m-%d")
         output_dir = os.path.join(OUTPUT_DIR, f"bitacora{bitacora_num}-{date_str}")
     os.makedirs(output_dir, exist_ok=True)
 
-    # 3. Definir el archivo de salida
+    # 2. Definir el archivo de salida
     output_filename = f"BitacoraMQuiazua{bitacora_num}.xlsx"
     output_path = os.path.join(output_dir, output_filename)
 
-    # 4. Copiar de la plantilla limpia al archivo final
+    # 3. Copiar de la plantilla al archivo final
     shutil.copy2(TEMPLATE_EXCEL_PATH, output_path)
 
-    # 5. Abrir y diligenciar
+    # 4. Abrir y diligenciar
     wb = openpyxl.load_workbook(output_path)
     sheet = wb['GFPI-F-147-Formato Bitácora']
 
@@ -271,20 +264,13 @@ def process_word_actas(moment, actas_data, execution_date_str, output_dir=None):
         print(f"[Word] Momento {moment} inválido para actas. Ignorando.")
         return
 
-    # --- Respaldo de plantilla Word ---
-    if not os.path.exists(TEMPLATE_WORD_PATH):
-        if not os.path.exists(WORD_PATH):
-            raise FileNotFoundError(f"No se encontró la plantilla original de Word en {WORD_PATH}")
-        shutil.copy2(WORD_PATH, TEMPLATE_WORD_PATH)
-        print(f"[Template Word] Respaldo de plantilla creado en {TEMPLATE_WORD_PATH}")
-
     # --- Determinar ruta de salida ---
     if output_dir is None:
         output_dir = os.path.join(OUTPUT_DIR, "actas")
     os.makedirs(output_dir, exist_ok=True)
     output_word_path = os.path.join(output_dir, "Actas-Inicio-Medio-Final.docx")
 
-    # --- Copiar desde el template limpio ---
+    # --- Copiar desde la plantilla ---
     shutil.copy2(TEMPLATE_WORD_PATH, output_word_path)
 
     print(f"[Word] Diligenciando Acta para Momento {moment} (Fecha ejecución: {execution_date_str}):")
@@ -465,8 +451,8 @@ def main():
     if args.force_moment:
         target_moment = args.force_moment
     else:
-        m2_date = datetime.date(2026, 7, 8)
-        m3_date = datetime.date(2026, 10, 8)
+        m2_date = datetime.date(2026, 6, 22)
+        m3_date = datetime.date(2026, 10, 7)
 
         diff_m2 = abs((exec_date - m2_date).days)
         diff_m3 = abs((exec_date - m3_date).days)

@@ -101,14 +101,14 @@ Este archivo contiene el razonamiento contextual inferido por el agente de IA (A
   ],
   "actas": {
     "momento_2": {
-      "fecha": "08/07/2026",
+      "fecha": "22/06/2026",
       "observaciones_instructor": "El aprendiz demuestra gran interés y una curva de aprendizaje óptima en el stack tecnológico asignado. Cumple a cabalidad con las actividades propuestas.",
       "observaciones_aprendiz": "He logrado familiarizarme con el stack de desarrollo y estoy aplicando mis conocimientos técnicos en la resolución de tareas diarias de manera efectiva.",
       "observaciones_coformador": "Manuel muestra excelente actitud, puntualidad y adaptación técnica. Se desenvuelve con proactividad en las tareas que se le asignan.",
       "compromisos_mejora": "Se sugiere reforzar la documentación técnica de los componentes implementados para facilitar el mantenimiento futuro. Se recomienda continuar con la práctica de revisiones de código periódicas."
     },
     "momento_3": {
-      "fecha": "08/10/2026",
+      "fecha": "07/10/2026",
       "observaciones_instructor": "Desempeño general sobresaliente. Manuel ha mostrado un alto nivel de autonomía, compromiso y calidad técnica en el desarrollo de software a lo largo del proceso.",
       "observaciones_aprendiz": "Culmino mi etapa productiva muy satisfecho con los aprendizajes técnicos en AWS, Python y modelado de datos, y con la experiencia de trabajo en equipo en la empresa.",
       "observaciones_coformador": "El aporte de Manuel fue valioso en los procesos internos de automatización. Demostró profesionalismo, excelente actitud y capacidad técnica de primer nivel.",

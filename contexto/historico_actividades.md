@@ -3,6 +3,12 @@
 Este es un markdown que se actualiza de manera manual, su unica funcion es alimentar el agente que dilegencia automaticamente cada una de las bitacoras que se deben de presentar al instructor de seguimiento del sena.
 ---
 
+> [!WARNING] 
+> **Importante:**
+> Estos datos cambian en función de las actividades que usted haya realizado en esos quince días, puede decirle al LLM que ponga los datos que usted quiera aqui, 
+> o simplemente puede hacerlo de manera manual siguiendo este mismo formato, **No olvide quitar `[DILIGENCIADA]`** de otra manera el script se saltará esa bitacora
+
+---
 ## Bitacora numero 1 - (08/04/2026 al 22/04/2026) [DILIGENCIADA]
 - El aprendiz se familiarizo con la estructura general de la empresa
 - El aprendiz estudio profundamente en el stack tecnologico general de la empresa

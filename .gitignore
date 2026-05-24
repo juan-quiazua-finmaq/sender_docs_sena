@@ -21,3 +21,10 @@ ENV/
 
 # Logs
 *.log
+
+# Output generado
+output/
+
+# Archivos de sesión del agente
+instrucciones/sessions/
+sessions/
