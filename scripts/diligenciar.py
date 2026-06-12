@@ -514,14 +514,19 @@ def main():
 
         modo = os.getenv("EMAIL_MODO", "pruebas")
         if modo == "produccion":
-            destinatario = os.getenv(
-                "EMAIL_DESTINATARIO_PRODUCCION", "oiospina@sena.edu.co"
-            )
+            destinatario = os.getenv("EMAIL_DESTINATARIO_PRODUCCION")
         else:
-            destinatario = os.getenv(
-                "EMAIL_DESTINATARIO_PRUEBAS", "jmqo2015@gmail.com"
+            destinatario = os.getenv("EMAIL_DESTINATARIO_PRUEBAS")
+
+        if not destinatario:
+            raise ValueError(
+                f"EMAIL_DESTINATARIO_{'PRODUCCION' if modo == 'produccion' else 'PRUEBAS'}"
+                f" no esta configurado en .env. Agregalo antes de continuar."
             )
-        cc = os.getenv("EMAIL_CC", "eivorkinkest@gmail.com")
+
+        cc = os.getenv("EMAIL_CC")
+        if not cc:
+            raise ValueError("EMAIL_CC no esta configurado en .env. Agregalo antes de continuar.")
 
         # Recopilar todos los archivos generados (xlsx, docx) desde los directorios de salida
         adjuntos = all_generated_files[:]

@@ -95,20 +95,19 @@ Para que el script pueda enviar correos automáticamente, necesitas una **contra
 Docs_SENA/
 ├── scripts/                    # Código ejecutable
 │   ├── diligenciar.py          # Script principal de automatización
-│   └── email_module.py           # Módulo de envío de correo
+│   └── email_module.py         # Módulo de envío de correo
 ├── tests/                        # Pruebas automatizadas
 │   ├── test_diligenciar.py       # Tests del script principal
 │   └── test_email_module.py      # Tests del módulo de correo
 ├── contexto/                     # Datos de entrada y plantillas
-│   ├── plantillas/               # Plantillas base (¡debes diligenciarlas!)
+│   ├── plantillas/               # Plantillas base (debes diligenciarlas manualmente)
 │   │   ├── bitacoras.xlsx        # Plantilla Excel de bitácoras
 │   │   └── actas.docx            # Plantilla Word de actas
 │   ├── historico_actividades.md  # Registro manual de actividades
 │   ├── memory_descriptions.md    # Descripciones inferidas por IA (JSON)
-│   └── FirmeManu.png             # Firma digital del aprendiz
+│   └── mensaje_instructor.md     # Plantilla editable del cuerpo del correo al instructor
 ├── instrucciones/                # Instrucciones para agentes de IA
-│   ├── AGENTS.md                 # Reglas de operación del agente líder
-│   └── sessions/                 # Historial de sesiones de trabajo
+│   └── AGENTS.md                 # Reglas de operación del agente líder
 ├── output/                       # Documentos generados (se crea automáticamente)
 ├── .env                          # Variables de entorno (no subir a git)
 ├── .env.example                  # Plantilla de variables de entorno
@@ -116,6 +115,8 @@ Docs_SENA/
 ├── .gitignore                    # Archivos ignorados por git
 └── README.md                     # Este archivo
 ```
+
+> **Nota:** La firma digital `FirmeManu.png` (imagen PNG con fondo transparente) debe estar disponible en el directorio raíz del workspace, junto a la carpeta `Docs_SENA/`. Se inserta manualmente en las plantillas `bitacoras.xlsx` y `actas.docx`.
 
 ---
 
@@ -256,6 +257,26 @@ Cada actividad debe tener: `descripcion`, `fecha_inicio`, `fecha_fin`, `evidenci
 
 > [!TIP]
 > **Recomendación fuerte:** Usa un **agente de IA** para generar el contenido de `memory_descriptions.md` a partir de `historico_actividades.md`. El agente puede inferir descripciones detalladas, distribuir fechas, proponer evidencias y redactar observaciones coherentes para las actas, ahorrándote horas de trabajo manual.
+
+---
+
+## Plantilla del mensaje al instructor
+
+El cuerpo del correo electrónico que se envía al instructor SENA se construye a partir de la plantilla `contexto/mensaje_instructor.md`. Puedes editar este archivo libremente para personalizar el saludo, agregar contexto adicional o ajustar la despedida.
+
+**Placeholders disponibles** (el script los reemplaza automáticamente):
+
+| Placeholder | Se reemplaza por |
+|-------------|------------------|
+| `{{destinatario}}` | Nombre del instructor destinatario |
+| `{{lista_bitacoras}}` | Lista de bitácoras con sus periodos |
+| `{{acta_moment}}` | Referencia al acta (Momento 2 o 3) si aplica |
+| `{{firma}}` | Tu nombre y empresa |
+| `{{fecha_ejecucion}}` | Fecha de ejecución del script |
+
+> **Recomendación:** Si editas la plantilla, conserva los placeholders para que el script pueda inyectar los datos dinámicos. Si eliminas un placeholder, esa parte del correo aparecerá vacía.
+
+Cuando uses un agente de IA para operar el proyecto, el agente te preguntará si quieres usar la plantilla actual o si prefieres editarla primero (incluyendo dictarle el texto nuevo). Consulta `instrucciones/AGENTS.md` para más detalles.
 
 ---
 

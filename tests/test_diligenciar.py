@@ -121,6 +121,101 @@ class TestDiligenciarAutomation(unittest.TestCase):
         self.assertIn("## Bitacora numero 1 - (08/04/2026 al 22/04/2026) [DILIGENCIADA]", content)
 
     # =========================================================================
+    # TESTS UNITARIOS: get_all_undiligenced_bitacoras
+    # =========================================================================
+
+    def test_get_all_undiligenced_bitacoras_todas_diligenciadas(self):
+        """Retorna lista vacía si todas las bitácoras están diligenciadas."""
+        mock_markdown = (
+            "# Historico\n\n"
+            "## Bitacora numero 1 - (08/04/2026 al 22/04/2026) [DILIGENCIADA]\n"
+            "- Actividad 1\n"
+            "## Bitacora numero 2 - (22/04/2026 al 06/05/2026) [DILIGENCIADA]\n"
+            "- Actividad 2\n"
+        )
+        with open(diligenciar.HISTORICO_PATH, 'w', encoding='utf-8') as f:
+            f.write(mock_markdown)
+
+        result = diligenciar.get_all_undiligenced_bitacoras()
+        self.assertEqual(result, [])
+
+    def test_get_all_undiligenced_bitacoras_multiples_pendientes(self):
+        """Retorna los números de todas las bitácoras pendientes."""
+        mock_markdown = (
+            "# Historico\n\n"
+            "## Bitacora numero 1 - (08/04/2026 al 22/04/2026)\n"
+            "- Actividad 1\n"
+            "## Bitacora numero 2 - (22/04/2026 al 06/05/2026) [DILIGENCIADA]\n"
+            "- Actividad 2\n"
+            "## Bitacora numero 3 - (06/05/2026 al 20/05/2026)\n"
+            "- Actividad 3\n"
+        )
+        with open(diligenciar.HISTORICO_PATH, 'w', encoding='utf-8') as f:
+            f.write(mock_markdown)
+
+        result = diligenciar.get_all_undiligenced_bitacoras()
+        self.assertEqual(result, [1, 3])
+
+    def test_get_all_undiligenced_bitacoras_todas_pendientes(self):
+        """Retorna todas las bitácoras si ninguna está diligenciada, en orden."""
+        mock_markdown = (
+            "# Historico\n\n"
+            "## Bitacora numero 1 - (08/04/2026 al 22/04/2026)\n"
+            "- Actividad 1\n"
+            "## Bitacora numero 2 - (22/04/2026 al 06/05/2026)\n"
+            "- Actividad 2\n"
+            "## Bitacora numero 3 - (06/05/2026 al 20/05/2026)\n"
+            "- Actividad 3\n"
+        )
+        with open(diligenciar.HISTORICO_PATH, 'w', encoding='utf-8') as f:
+            f.write(mock_markdown)
+
+        result = diligenciar.get_all_undiligenced_bitacoras()
+        self.assertEqual(result, [1, 2, 3])
+
+    # =========================================================================
+    # TESTS UNITARIOS: parse_memory_descriptions validación de errores
+    # =========================================================================
+
+    def test_parse_memory_descriptions_archivo_no_existe(self):
+        """Falla con FileNotFoundError si el archivo no existe."""
+        original = diligenciar.MEMORY_PATH
+        try:
+            diligenciar.MEMORY_PATH = os.path.join(self.test_dir, "no_existe.md")
+            with self.assertRaises(FileNotFoundError):
+                diligenciar.parse_memory_descriptions()
+        finally:
+            diligenciar.MEMORY_PATH = original
+
+    def test_parse_memory_descriptions_sin_bloque_json(self):
+        """Falla con ValueError si no hay bloque ```json ... ```."""
+        bad_path = os.path.join(self.test_dir, "memory_sin_json.md")
+        with open(bad_path, 'w', encoding='utf-8') as f:
+            f.write("# Sin bloque JSON\n\nEste archivo no tiene bloque json.")
+
+        original = diligenciar.MEMORY_PATH
+        try:
+            diligenciar.MEMORY_PATH = bad_path
+            with self.assertRaises(ValueError):
+                diligenciar.parse_memory_descriptions()
+        finally:
+            diligenciar.MEMORY_PATH = original
+
+    def test_parse_memory_descriptions_json_malformado(self):
+        """Falla si el JSON dentro del bloque está malformado."""
+        bad_json_path = os.path.join(self.test_dir, "memory_bad_json.md")
+        with open(bad_json_path, 'w', encoding='utf-8') as f:
+            f.write("```json\n{ esto no es json valido }\n```")
+
+        original = diligenciar.MEMORY_PATH
+        try:
+            diligenciar.MEMORY_PATH = bad_json_path
+            with self.assertRaises(json.JSONDecodeError):
+                diligenciar.parse_memory_descriptions()
+        finally:
+            diligenciar.MEMORY_PATH = original
+
+    # =========================================================================
     # TESTS DE INTEGRACIÓN EXCEL (actualizados para refactor v2)
     # =========================================================================
 

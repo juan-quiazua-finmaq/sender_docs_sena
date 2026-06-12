@@ -9,6 +9,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+MENSAJE_INSTRUCTOR_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "contexto",
+    "mensaje_instructor.md",
+)
+
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
 
@@ -49,7 +55,10 @@ def construir_asunto(bitacoras_info, acta_moment=None):
 
 
 def construir_cuerpo(bitacoras_info, acta_moment=None):
-    """Construye el cuerpo del email con redacción cordial y signos de puntuación correctos.
+    """Construye el cuerpo del email usando la plantilla markdown.
+
+    Lee el archivo contexto/mensaje_instructor.md, reemplaza los placeholders
+    con los datos reales y retorna el cuerpo en texto plano.
 
     Args:
         bitacoras_info: Lista de diccionarios con 'numero', 'fecha_inicio', 'fecha_fin'.
@@ -58,26 +67,63 @@ def construir_cuerpo(bitacoras_info, acta_moment=None):
     Returns:
         str: Cuerpo del mensaje en texto plano.
     """
-    cuerpo = "Estimado instructor Oscar Ivan Ospina Ospina,\n\n"
-    cuerpo += (
-        "Reciba un cordial saludo. Por medio del presente correo, hago entrega de las "
-        "bitácoras correspondientes a mi etapa productiva, las cuales detallo a continuación:\n\n"
-    )
+    from datetime import datetime
 
-    for b in bitacoras_info:
-        cuerpo += f"- Bitácora {b['numero']} ({b['fecha_inicio']} al {b['fecha_fin']})\n"
-
-    if acta_moment is not None:
+    if os.path.exists(MENSAJE_INSTRUCTOR_PATH):
+        with open(MENSAJE_INSTRUCTOR_PATH, "r", encoding="utf-8") as f:
+            contenido = f.read()
+        # Extraer solo el cuerpo después del separador ---
+        if "---" in contenido:
+            idx = contenido.index("---")
+            cuerpo = contenido[idx + 3:].strip()
+        else:
+            cuerpo = contenido.strip()
+    else:
+        cuerpo = "Estimado instructor Oscar Ivan Ospina Ospina,\n\n"
         cuerpo += (
-            f"\nAdjunto también el acta correspondiente al Momento {acta_moment} (si aplica).\n"
+            "Reciba un cordial saludo. Por medio del presente correo, hago entrega de las "
+            "bitácoras correspondientes a mi etapa productiva, las cuales detallo a continuación:\n\n"
         )
 
-    cuerpo += (
-        "\nNos gustaría saber si para la próxima semana o esta tiene disponibilidad "
-        "para las correspondientes visitas.\n"
+        for b in bitacoras_info:
+            cuerpo += f"- Bitácora {b['numero']} ({b['fecha_inicio']} al {b['fecha_fin']})\n"
+
+        if acta_moment is not None:
+            cuerpo += (
+                f"\nAdjunto también el acta correspondiente al Momento {acta_moment} (si aplica).\n"
+            )
+
+        cuerpo += (
+            "\nNos gustaría saber si para la próxima semana o esta tiene disponibilidad "
+            "para las correspondientes visitas.\n"
+        )
+        cuerpo += "\nNo siendo más, agradecemos su tiempo y atención.\n"
+        cuerpo += "\nCordialmente,\nManuel Quiazua y Finmaq"
+        return cuerpo
+
+    # Reemplazar placeholders
+    lista_bitacoras = "\n".join(
+        f"- Bitácora {b['numero']} ({b['fecha_inicio']} al {b['fecha_fin']})"
+        for b in bitacoras_info
     )
-    cuerpo += "\nNo siendo más, agradecemos su tiempo y atención.\n"
-    cuerpo += "\nCordialmente,\nManuel Quiazua y Finmaq"
+
+    if acta_moment is not None:
+        acta_text = (
+            f"\nAdjunto también el acta correspondiente al Momento {acta_moment} (si aplica).\n"
+        )
+    else:
+        acta_text = ""
+
+    fecha_ejecucion = datetime.now().strftime("%d/%m/%Y")
+    destinatario = "instructor Oscar Ivan Ospina Ospina"
+    firma = "Manuel Quiazua y Finmaq"
+
+    cuerpo = cuerpo.replace("{{destinatario}}", destinatario)
+    cuerpo = cuerpo.replace("{{lista_bitacoras}}", lista_bitacoras)
+    cuerpo = cuerpo.replace("{{acta_moment}}", acta_text)
+    cuerpo = cuerpo.replace("{{firma}}", firma)
+    cuerpo = cuerpo.replace("{{fecha_ejecucion}}", fecha_ejecucion)
+
     return cuerpo
 
 
@@ -95,7 +141,9 @@ def enviar_email(destinatario, cc, asunto, cuerpo, adjuntos, intentos=3):
     Returns:
         Tuple[bool, str]: (éxito, mensaje descriptivo).
     """
-    remitente = os.getenv("GMAIL_SENDER", "jmqo2026@gmail.com")
+    remitente = os.getenv("GMAIL_SENDER")
+    if not remitente:
+        raise ValueError("GMAIL_SENDER no esta configurado en .env. Agregalo antes de continuar.")
     password = os.getenv("GMAIL_APP_PASSWORD")
 
     if not password:
@@ -200,14 +248,19 @@ def reintentar_envio_manual(bitacoras_info, output_dir, adjuntos=None):
 
     modo = os.getenv("EMAIL_MODO", "pruebas")
     if modo == "produccion":
-        destinatario = os.getenv(
-            "EMAIL_DESTINATARIO_PRODUCCION", "oiospina@sena.edu.co"
-        )
+        destinatario = os.getenv("EMAIL_DESTINATARIO_PRODUCCION")
     else:
-        destinatario = os.getenv(
-            "EMAIL_DESTINATARIO_PRUEBAS", "jmqo2015@gmail.com"
+        destinatario = os.getenv("EMAIL_DESTINATARIO_PRUEBAS")
+
+    if not destinatario:
+        raise ValueError(
+            f"EMAIL_DESTINATARIO_{'PRODUCCION' if modo == 'produccion' else 'PRUEBAS'}"
+            f" no esta configurado en .env. Agregalo antes de continuar."
         )
-    cc = os.getenv("EMAIL_CC", "eivorkinkest@gmail.com")
+
+    cc = os.getenv("EMAIL_CC")
+    if not cc:
+        raise ValueError("EMAIL_CC no esta configurado en .env. Agregalo antes de continuar.")
 
     if adjuntos is None:
         adjuntos = []

@@ -82,57 +82,98 @@ class TestConstruirAsunto(unittest.TestCase):
 
 
 class TestConstruirCuerpo(unittest.TestCase):
-    """Tests para la función construir_cuerpo() con nueva firma por lote."""
+    """Tests para la función construir_cuerpo() con plantilla markdown.
 
-    def test_construir_cuerpo_una_bitacora(self):
-        """Verifica el cuerpo del mensaje con una bitácora."""
+    Verifica reemplazo de placeholders, fallback cuando el archivo no existe,
+    y manejo correcto de acta_moment.
+    """
+
+    def test_usa_plantilla_markdown_si_existe(self):
+        """Con archivo existente, debe usar la plantilla y NO dejar placeholders."""
         bitacoras_info = [
             {'numero': 3, 'fecha_inicio': '01/05/2026', 'fecha_fin': '15/05/2026'},
         ]
         resultado = email_module.construir_cuerpo(bitacoras_info, acta_moment=None)
-        # Debe contener el nuevo saludo personalizado
+        # No debe contener placeholders sin reemplazar
+        self.assertNotIn("{{destinatario}}", resultado)
+        self.assertNotIn("{{lista_bitacoras}}", resultado)
+        self.assertNotIn("{{firma}}", resultado)
+        self.assertNotIn("{{fecha_ejecucion}}", resultado)
+        # Debe contener contenido esperado tras reemplazo
+        self.assertIn("Estimado", resultado)
+        self.assertIn("Cordialmente", resultado)
+
+    @patch("email_module.os.path.exists")
+    def test_fallback_a_mensaje_hardcoded_si_no_existe(self, mock_exists):
+        """Sin archivo de plantilla, debe usar el mensaje hardcoded original."""
+        def exists_side_effect(path):
+            if "mensaje_instructor" in str(path):
+                return False
+            return os.path.exists(path)
+        mock_exists.side_effect = exists_side_effect
+
+        bitacoras_info = [
+            {'numero': 1, 'fecha_inicio': '01/04/2026', 'fecha_fin': '15/04/2026'},
+        ]
+        resultado = email_module.construir_cuerpo(bitacoras_info, acta_moment=None)
+        # El mensaje hardcoded tiene el nombre específico del instructor
         self.assertIn("Estimado instructor Oscar Ivan Ospina Ospina", resultado)
-        self.assertIn("01/05/2026", resultado)
-        self.assertIn("15/05/2026", resultado)
+        self.assertIn("- Bitácora 1", resultado)
         self.assertIn("Cordialmente", resultado)
         self.assertIn("Manuel Quiazua y Finmaq", resultado)
-        # Debe listar la bitácora en formato Opción B
-        self.assertIn("- Bitácora 3", resultado)
-        # NO debe contener referencia al acta
-        self.assertNotIn("acta correspondiente", resultado.lower())
 
-    def test_construir_cuerpo_varias_bitacoras(self):
-        """Verifica el cuerpo del mensaje con varias bitácoras."""
+    def test_reemplaza_destinatario(self):
+        """Verifica que {{destinatario}} fue reemplazado (no queda placeholder)."""
+        bitacoras_info = [
+            {'numero': 1, 'fecha_inicio': '01/04/2026', 'fecha_fin': '15/04/2026'},
+        ]
+        resultado = email_module.construir_cuerpo(bitacoras_info, acta_moment=None)
+        self.assertNotIn("{{destinatario}}", resultado)
+        self.assertIn("instructor Oscar Ivan Ospina Ospina", resultado)
+
+    def test_reemplaza_lista_bitacoras(self):
+        """Verifica que {{lista_bitacoras}} se reemplaza con la lista de bitácoras."""
         bitacoras_info = [
             {'numero': 1, 'fecha_inicio': '08/04/2026', 'fecha_fin': '22/04/2026'},
             {'numero': 2, 'fecha_inicio': '22/04/2026', 'fecha_fin': '06/05/2026'},
-            {'numero': 3, 'fecha_inicio': '06/05/2026', 'fecha_fin': '20/05/2026'},
         ]
         resultado = email_module.construir_cuerpo(bitacoras_info, acta_moment=None)
-        # Debe listar cada bitácora
+        self.assertNotIn("{{lista_bitacoras}}", resultado)
         self.assertIn("- Bitácora 1 (08/04/2026 al 22/04/2026)", resultado)
         self.assertIn("- Bitácora 2 (22/04/2026 al 06/05/2026)", resultado)
-        self.assertIn("- Bitácora 3 (06/05/2026 al 20/05/2026)", resultado)
-        self.assertIn("Reciba un cordial saludo", resultado)
 
-    def test_construir_cuerpo_con_acta(self):
-        """Verifica el cuerpo del mensaje cuando hay acta incluida."""
+    def test_reemplaza_firma(self):
+        """Verifica que {{firma}} se reemplaza por el nombre real."""
+        bitacoras_info = [
+            {'numero': 1, 'fecha_inicio': '01/04/2026', 'fecha_fin': '15/04/2026'},
+        ]
+        resultado = email_module.construir_cuerpo(bitacoras_info, acta_moment=None)
+        self.assertNotIn("{{firma}}", resultado)
+        self.assertIn("Manuel Quiazua y Finmaq", resultado)
+
+    def test_incluye_acta_si_acta_moment_no_es_none(self):
+        """Con acta_moment=2, debe incluir referencia al Momento 2."""
         bitacoras_info = [
             {'numero': 1, 'fecha_inicio': '08/04/2026', 'fecha_fin': '22/04/2026'},
         ]
         resultado = email_module.construir_cuerpo(bitacoras_info, acta_moment=2)
-        self.assertIn("Estimado instructor Oscar Ivan Ospina Ospina", resultado)
-        self.assertIn("08/04/2026", resultado)
-        self.assertIn("22/04/2026", resultado)
-        # DEBE contener referencia al acta
-        self.assertIn("acta correspondiente al Momento 2", resultado)
-        self.assertIn("Cordialmente", resultado)
+        self.assertNotIn("{{acta_moment}}", resultado)
+        self.assertIn("Momento 2", resultado)
+
+    def test_omite_acta_si_acta_moment_es_none(self):
+        """Con acta_moment=None, no debe incluir texto de acta ni placeholder."""
+        bitacoras_info = [
+            {'numero': 1, 'fecha_inicio': '08/04/2026', 'fecha_fin': '22/04/2026'},
+        ]
+        resultado = email_module.construir_cuerpo(bitacoras_info, acta_moment=None)
+        self.assertNotIn("{{acta_moment}}", resultado)
+        self.assertNotIn("Momento", resultado)
 
 
 class TestEnviarEmailMockSMTP(unittest.TestCase):
     """Tests para enviar_email() con mock de SMTP."""
 
-    @patch.dict(os.environ, {"GMAIL_APP_PASSWORD": "test-password-16ch"})
+    @patch.dict(os.environ, {"GMAIL_APP_PASSWORD": "test-password-16ch", "GMAIL_SENDER": "test@gmail.com"})
     @patch("email_module.smtplib.SMTP")
     def test_enviar_email_mock_smtp(self, mock_smtp_class):
         """Mock del envío SMTP: verifica la estructura del email enviado."""
@@ -159,25 +200,23 @@ class TestEnviarEmailMockSMTP(unittest.TestCase):
         )
         mock_server.starttls.assert_called_once()
         mock_server.login.assert_called_once_with(
-            "jmqo2026@gmail.com", "test-password-16ch"
+            "test@gmail.com", "test-password-16ch"
         )
 
         # Verificar que sendmail fue llamado con remitente, destinatarios y mensaje
         mock_server.sendmail.assert_called_once()
         sendmail_args = mock_server.sendmail.call_args[0]
-        self.assertEqual(sendmail_args[0], "jmqo2026@gmail.com")  # From
+        self.assertEqual(sendmail_args[0], "test@gmail.com")  # From
         # To + Cc
         self.assertIn("dest@test.com", sendmail_args[1])
         self.assertIn("cc@test.com", sendmail_args[1])
 
         mock_server.quit.assert_called_once()
 
-    @patch.dict(os.environ, {}, clear=True)
+    @patch.dict(os.environ, {"GMAIL_SENDER": "test@gmail.com"}, clear=True)
     def test_enviar_email_sin_password_retorna_error(self):
         """Si no hay GMAIL_APP_PASSWORD, retorna error sin intentar SMTP."""
-        # Asegurar que no existe la variable
-        os.environ.pop("GMAIL_APP_PASSWORD", None)
-
+        # GMAIL_SENDER is set by patch.dict; GMAIL_APP_PASSWORD is not
         exito, mensaje = email_module.enviar_email(
             destinatario="dest@test.com",
             cc="",
@@ -189,11 +228,25 @@ class TestEnviarEmailMockSMTP(unittest.TestCase):
         self.assertFalse(exito)
         self.assertIn("GMAIL_APP_PASSWORD", mensaje)
 
+    @patch.dict(os.environ, {}, clear=True)
+    def test_enviar_email_sin_sender_raises_value_error(self):
+        """Si no hay GMAIL_SENDER, lanza ValueError con mensaje claro."""
+        os.environ.pop("GMAIL_SENDER", None)
+        with self.assertRaises(ValueError) as ctx:
+            email_module.enviar_email(
+                destinatario="dest@test.com",
+                cc="",
+                asunto="Test",
+                cuerpo="Test",
+                adjuntos=[],
+            )
+        self.assertIn("GMAIL_SENDER", str(ctx.exception))
+
 
 class TestEnviarEmailReintentos(unittest.TestCase):
     """Tests para verificar reintentos automáticos ante fallos SMTP."""
 
-    @patch.dict(os.environ, {"GMAIL_APP_PASSWORD": "test-password-16ch"})
+    @patch.dict(os.environ, {"GMAIL_APP_PASSWORD": "test-password-16ch", "GMAIL_SENDER": "test@gmail.com"})
     @patch("email_module.time.sleep")
     @patch("email_module.smtplib.SMTP")
     def test_enviar_email_reintentos_automaticos(
@@ -224,7 +277,7 @@ class TestEnviarEmailReintentos(unittest.TestCase):
         self.assertEqual(mock_sleep.call_count, 2)
         mock_sleep.assert_called_with(5)
 
-    @patch.dict(os.environ, {"GMAIL_APP_PASSWORD": "test-password-16ch"})
+    @patch.dict(os.environ, {"GMAIL_APP_PASSWORD": "test-password-16ch", "GMAIL_SENDER": "test@gmail.com"})
     @patch("email_module.time.sleep")
     @patch("email_module.smtplib.SMTP")
     def test_enviar_email_reintento_exitoso_en_segundo_intento(
@@ -252,7 +305,7 @@ class TestEnviarEmailReintentos(unittest.TestCase):
         self.assertEqual(mock_smtp_class.call_count, 2)
         mock_sleep.assert_called_once_with(5)
 
-    @patch.dict(os.environ, {"GMAIL_APP_PASSWORD": "test-password-16ch"})
+    @patch.dict(os.environ, {"GMAIL_APP_PASSWORD": "test-password-16ch", "GMAIL_SENDER": "test@gmail.com"})
     @patch("email_module.time.sleep")
     @patch("email_module.smtplib.SMTP")
     def test_enviar_email_falla_autenticacion_3_veces(
@@ -278,34 +331,40 @@ class TestEnviarEmailReintentos(unittest.TestCase):
 
 
 class TestCargarVariablesEntorno(unittest.TestCase):
-    """Tests para verificar que .env se carga correctamente."""
-
-    def test_cargar_variables_entorno(self):
-        """Verifica que las variables de entorno se cargan desde .env."""
-        gmail_sender = os.getenv("GMAIL_SENDER")
-        gmail_password = os.getenv("GMAIL_APP_PASSWORD")
-        email_cc = os.getenv("EMAIL_CC")
-        email_modo = os.getenv("EMAIL_MODO")
-
-        # Buscar .env en la raíz del proyecto
-        env_path = os.path.join(os.path.dirname(__file__), '..', ".env")
-        if os.path.exists(env_path):
-            self.assertIsNotNone(gmail_sender, "GMAIL_SENDER no cargada")
-            self.assertIsNotNone(gmail_password, "GMAIL_APP_PASSWORD no cargada")
-            self.assertIsNotNone(email_cc, "EMAIL_CC no cargada")
-            self.assertIsNotNone(email_modo, "EMAIL_MODO no cargada")
-
-            # Valores esperados del .env
-            self.assertEqual(gmail_sender, "jmqo2026@gmail.com")
-            self.assertEqual(email_cc, "eivorkinkest@gmail.com")
-            self.assertIn(email_modo, ["pruebas", "produccion"])
-        else:
-            self.skipTest("Archivo .env no encontrado; se omite verificación")
+    """Tests para verificar configuración de variables de entorno."""
 
     def test_smtp_constants(self):
         """Verifica que las constantes SMTP del módulo son correctas."""
         self.assertEqual(email_module.SMTP_SERVER, "smtp.gmail.com")
         self.assertEqual(email_module.SMTP_PORT, 587)
+
+    @patch.dict(os.environ, {"GMAIL_SENDER": "test@gmail.com"}, clear=True)
+    def test_enviar_email_requiere_gmail_sender(self):
+        """Verifica que enviar_email falla con ValueError si no hay GMAIL_SENDER."""
+        os.environ.pop("GMAIL_SENDER", None)
+        with self.assertRaises(ValueError) as ctx:
+            email_module.enviar_email(
+                destinatario="dest@test.com",
+                cc="",
+                asunto="Test",
+                cuerpo="Test",
+                adjuntos=[],
+            )
+        self.assertIn("GMAIL_SENDER", str(ctx.exception))
+
+    @patch.dict(os.environ, {"GMAIL_SENDER": "test@gmail.com"}, clear=True)
+    def test_enviar_email_requiere_gmail_app_password(self):
+        """Verifica que enviar_email retorna error si no hay GMAIL_APP_PASSWORD."""
+        os.environ.pop("GMAIL_APP_PASSWORD", None)
+        exito, mensaje = email_module.enviar_email(
+            destinatario="dest@test.com",
+            cc="",
+            asunto="Test",
+            cuerpo="Test",
+            adjuntos=[],
+        )
+        self.assertFalse(exito)
+        self.assertIn("GMAIL_APP_PASSWORD", mensaje)
 
 
 if __name__ == "__main__":
