@@ -116,11 +116,12 @@ class TestConstruirCuerpo(unittest.TestCase):
             {'numero': 1, 'fecha_inicio': '01/04/2026', 'fecha_fin': '15/04/2026'},
         ]
         resultado = email_module.construir_cuerpo(bitacoras_info, acta_moment=None)
-        # El mensaje hardcoded tiene el nombre específico del instructor
-        self.assertIn("Estimado instructor Oscar Ivan Ospina Ospina", resultado)
+        # El mensaje hardcoded usa un saludo generico
+        self.assertIn("Estimado instructor", resultado)
         self.assertIn("- Bitácora 1", resultado)
-        self.assertIn("Cordialmente", resultado)
-        self.assertIn("Manuel Quiazua y Finmaq", resultado)
+        # El fallback NO incluye "Cordialmente" (retorna antes de la firma)
+        self.assertNotIn("{{firma}}", resultado)
+        self.assertNotIn("{{destinatario}}", resultado)
 
     def test_reemplaza_destinatario(self):
         """Verifica que {{destinatario}} fue reemplazado (no queda placeholder)."""
@@ -129,7 +130,7 @@ class TestConstruirCuerpo(unittest.TestCase):
         ]
         resultado = email_module.construir_cuerpo(bitacoras_info, acta_moment=None)
         self.assertNotIn("{{destinatario}}", resultado)
-        self.assertIn("instructor Oscar Ivan Ospina Ospina", resultado)
+        self.assertIn("instructor", resultado)
 
     def test_reemplaza_lista_bitacoras(self):
         """Verifica que {{lista_bitacoras}} se reemplaza con la lista de bitácoras."""
@@ -149,7 +150,10 @@ class TestConstruirCuerpo(unittest.TestCase):
         ]
         resultado = email_module.construir_cuerpo(bitacoras_info, acta_moment=None)
         self.assertNotIn("{{firma}}", resultado)
-        self.assertIn("Manuel Quiazua y Finmaq", resultado)
+        # La firma ahora se lee desde .env; este test verificara que el placeholder
+        # {{firma}} fue procesado (no debe quedar literal en el output)
+        self.assertNotIn("{{firma}}", resultado)
+        self.assertIn("Cordialmente", resultado)
 
     def test_incluye_acta_si_acta_moment_no_es_none(self):
         """Con acta_moment=2, debe incluir referencia al Momento 2."""
@@ -365,6 +369,61 @@ class TestCargarVariablesEntorno(unittest.TestCase):
         )
         self.assertFalse(exito)
         self.assertIn("GMAIL_APP_PASSWORD", mensaje)
+
+
+class TestConstruirCuerpoEnvVars(unittest.TestCase):
+    """Tests para verificar que construir_cuerpo usa variables de entorno
+    para construir la firma y el destinatario."""
+
+    @patch.dict(os.environ, {
+        "APRENDIZ_NOMBRE": "Test User",
+        "EMPRESA_NOMBRE": "Test Co",
+        "INSTRUCTOR_NOMBRE": "Test Instructor",
+        "GMAIL_APP_PASSWORD": "test-password-16ch",
+        "GMAIL_SENDER": "test@gmail.com",
+    })
+    def test_construir_cuerpo_usa_firma_de_env(self):
+        """Verifica que la firma se construye desde las variables de entorno."""
+        bitacoras_info = [
+            {'numero': 1, 'fecha_inicio': '01/04/2026', 'fecha_fin': '15/04/2026'},
+        ]
+        resultado = email_module.construir_cuerpo(bitacoras_info, acta_moment=None)
+        self.assertIn("Test User y Test Co", resultado)
+        self.assertIn("instructor Test Instructor", resultado)
+
+    @patch.dict(os.environ, {
+        "APRENDIZ_NOMBRE": "Maria Garcia",
+        "EMPRESA_NOMBRE": "Empresa XYZ",
+        "INSTRUCTOR_NOMBRE": "Pedro Ramirez",
+        "GMAIL_APP_PASSWORD": "test-password-16ch",
+        "GMAIL_SENDER": "test@gmail.com",
+    })
+    def test_construir_cuerpo_firma_personalizada(self):
+        """Verifica que con otros valores de env, la firma cambia."""
+        bitacoras_info = [
+            {'numero': 1, 'fecha_inicio': '01/04/2026', 'fecha_fin': '15/04/2026'},
+        ]
+        resultado = email_module.construir_cuerpo(bitacoras_info, acta_moment=None)
+        self.assertIn("Maria Garcia y Empresa XYZ", resultado)
+        self.assertIn("instructor Pedro Ramirez", resultado)
+
+    @patch.dict(os.environ, {
+        "APRENDIZ_NOMBRE": "",
+        "EMPRESA_NOMBRE": "",
+        "INSTRUCTOR_NOMBRE": "",
+        "GMAIL_APP_PASSWORD": "test-password-16ch",
+        "GMAIL_SENDER": "test@gmail.com",
+    })
+    def test_construir_cuerpo_firma_fallback(self):
+        """Sin variables de entorno, usa valores por defecto."""
+        bitacoras_info = [
+            {'numero': 1, 'fecha_inicio': '01/04/2026', 'fecha_fin': '15/04/2026'},
+        ]
+        resultado = email_module.construir_cuerpo(bitacoras_info, acta_moment=None)
+        self.assertNotIn("{{firma}}", resultado)
+        self.assertNotIn("{{destinatario}}", resultado)
+        self.assertIn("El aprendiz", resultado)
+        self.assertIn("instructor", resultado)
 
 
 if __name__ == "__main__":

@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import datetime
 import argparse
@@ -11,6 +12,12 @@ from docx.shared import Pt
 from dotenv import load_dotenv
 
 load_dotenv()
+
+# Importar validador de entorno (modulo sibling en scripts/)
+_THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+if _THIS_DIR not in sys.path:
+    sys.path.insert(0, _THIS_DIR)
+import env_validator  # noqa: E402
 
 # Caminos absolutos a los archivos de trabajo
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -162,7 +169,7 @@ def fill_excel_bitacora(bitacora_num, bitacora_data, execution_date, output_dir=
     os.makedirs(output_dir, exist_ok=True)
 
     # 2. Definir el archivo de salida
-    output_filename = f"BitacoraMQuiazua{bitacora_num}.xlsx"
+    output_filename = f"Bitacora_{bitacora_data['fecha_inicio'].replace('/', '-')}_{bitacora_data['fecha_fin'].replace('/', '-')}.xlsx"
     output_path = os.path.join(output_dir, output_filename)
 
     # 3. Copiar de la plantilla al archivo final
@@ -380,7 +387,32 @@ def main():
     parser.add_argument("--force-moment", type=int, choices=[2, 3], default=None, help="Forzar el diligenciamiento de un acta (Word).")
     parser.add_argument("--dry-run", action="store_true", help="Analizar markdown y memoria sin escribir archivos.")
     parser.add_argument("--no-email", action="store_true", help="No enviar correo electrónico al finalizar.")
+    parser.add_argument(
+        "--ai-mode",
+        action="store_true",
+        help="Modo agente: valida entorno y emite JSON estructurado si falta .env (no usa prompts).",
+    )
+    parser.add_argument(
+        "--skip-env-check",
+        action="store_true",
+        help="Saltar la validacion del .env al inicio (util solo para tests internos).",
+    )
     args = parser.parse_args()
+
+    # 0. Validar variables de entorno al inicio.
+    # Si falta algo, imprime error y sale. En modo agente imprime JSON estructurado.
+    if not args.skip_env_check:
+        if not env_validator.require_env(mode="ai" if args.ai_mode else "human"):
+            if args.ai_mode:
+                sys.exit(1)
+            else:
+                print(
+                    "\n[Diligenciar] Configure el .env y vuelva a ejecutar.\n"
+                    "              O use --skip-env-check solo si esta ejecutando tests internos.\n"
+                    "              Wizard: python scripts/setup.py",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
 
     # Decidir envío de email: por defecto se envía, a menos que se indique --no-email o --dry-run
     send_email = not args.no_email and not args.dry_run

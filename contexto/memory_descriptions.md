@@ -1,6 +1,6 @@
 # Registro de Razonamiento de IA: Descripciones, Evidencias e Inferencias de Bitácoras y Actas
 
-Este archivo contiene el razonamiento contextual inferido por el agente de IA (Antigravity). Decopla la inferencia de la ejecución física de los scripts de automatización.
+Este archivo contiene el razonamiento contextual inferido por el agente de IA. Desacopla la inferencia de la ejecución física de los scripts de automatización.
 
 ```json
 {
@@ -104,14 +104,14 @@ Este archivo contiene el razonamiento contextual inferido por el agente de IA (A
       "fecha": "22/06/2026",
       "observaciones_instructor": "El aprendiz demuestra gran interés y una curva de aprendizaje óptima en el stack tecnológico asignado. Cumple a cabalidad con las actividades propuestas.",
       "observaciones_aprendiz": "He logrado familiarizarme con el stack de desarrollo y estoy aplicando mis conocimientos técnicos en la resolución de tareas diarias de manera efectiva.",
-      "observaciones_coformador": "Manuel muestra excelente actitud, puntualidad y adaptación técnica. Se desenvuelve con proactividad en las tareas que se le asignan.",
+      "observaciones_coformador": "El aprendiz muestra excelente actitud, puntualidad y adaptación técnica. Se desenvuelve con proactividad en las tareas que se le asignan.",
       "compromisos_mejora": "Se sugiere reforzar la documentación técnica de los componentes implementados para facilitar el mantenimiento futuro. Se recomienda continuar con la práctica de revisiones de código periódicas."
     },
     "momento_3": {
       "fecha": "07/10/2026",
-      "observaciones_instructor": "Desempeño general sobresaliente. Manuel ha mostrado un alto nivel de autonomía, compromiso y calidad técnica en el desarrollo de software a lo largo del proceso.",
+      "observaciones_instructor": "Desempeño general sobresaliente. El aprendiz ha mostrado un alto nivel de autonomía, compromiso y calidad técnica en el desarrollo de software a lo largo del proceso.",
       "observaciones_aprendiz": "Culmino mi etapa productiva muy satisfecho con los aprendizajes técnicos en AWS, Python y modelado de datos, y con la experiencia de trabajo en equipo en la empresa.",
-      "observaciones_coformador": "El aporte de Manuel fue valioso en los procesos internos de automatización. Demostró profesionalismo, excelente actitud y capacidad técnica de primer nivel.",
+      "observaciones_coformador": "El aporte del aprendiz fue valioso en los procesos internos de automatización. Demostró profesionalismo, excelente actitud y capacidad técnica de primer nivel.",
       "compromisos_mejora": "Se recomienda profundizar en la implementación de pruebas automatizadas para los sistemas desarrollados. Sería beneficioso mantener actualizada la documentación de los procesos de despliegue y configuración."
     }
   }

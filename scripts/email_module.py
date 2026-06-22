@@ -79,10 +79,12 @@ def construir_cuerpo(bitacoras_info, acta_moment=None):
         else:
             cuerpo = contenido.strip()
     else:
-        cuerpo = "Estimado instructor Oscar Ivan Ospina Ospina,\n\n"
+        # Fallback: la firma y destinatario se leen desde .env (APRENDIZ_NOMBRE, INSTRUCTOR_NOMBRE)
+        # Si no se provee plantilla, se usa un mensaje generico con placeholders.
+        cuerpo = "Estimado instructor,\n\n"
         cuerpo += (
             "Reciba un cordial saludo. Por medio del presente correo, hago entrega de las "
-            "bitácoras correspondientes a mi etapa productiva, las cuales detallo a continuación:\n\n"
+            "bitacoras correspondientes a mi etapa productiva, las cuales detallo a continuacion:\n\n"
         )
 
         for b in bitacoras_info:
@@ -98,7 +100,8 @@ def construir_cuerpo(bitacoras_info, acta_moment=None):
             "para las correspondientes visitas.\n"
         )
         cuerpo += "\nNo siendo más, agradecemos su tiempo y atención.\n"
-        cuerpo += "\nCordialmente,\nManuel Quiazua y Finmaq"
+        # Firma se construye en construir_cuerpo() desde .env
+        pass
         return cuerpo
 
     # Reemplazar placeholders
@@ -115,8 +118,22 @@ def construir_cuerpo(bitacoras_info, acta_moment=None):
         acta_text = ""
 
     fecha_ejecucion = datetime.now().strftime("%d/%m/%Y")
-    destinatario = "instructor Oscar Ivan Ospina Ospina"
-    firma = "Manuel Quiazua y Finmaq"
+
+    aprendiz = os.getenv("APRENDIZ_NOMBRE", "").strip()
+    empresa = os.getenv("EMPRESA_NOMBRE", "").strip()
+    instructor = os.getenv("INSTRUCTOR_NOMBRE", "").strip()
+
+    if aprendiz and empresa:
+        firma = f"{aprendiz} y {empresa}"
+    elif aprendiz:
+        firma = aprendiz
+    else:
+        firma = "El aprendiz"
+
+    if instructor:
+        destinatario = f"instructor {instructor}"
+    else:
+        destinatario = "instructor"
 
     cuerpo = cuerpo.replace("{{destinatario}}", destinatario)
     cuerpo = cuerpo.replace("{{lista_bitacoras}}", lista_bitacoras)

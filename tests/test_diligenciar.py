@@ -235,7 +235,9 @@ class TestDiligenciarAutomation(unittest.TestCase):
         
         # Verificar que el archivo se creó
         self.assertTrue(os.path.exists(out_path))
-        self.assertEqual(os.path.basename(out_path), "BitacoraMQuiazua1.xlsx")
+        basename = os.path.basename(out_path)
+        self.assertTrue(basename.startswith("Bitacora_08-04-2026_22-04-2026"))
+        self.assertTrue(basename.endswith(".xlsx"))
         
         # Cargar el archivo generado para inspeccionar sus celdas
         wb = openpyxl.load_workbook(out_path, data_only=True)

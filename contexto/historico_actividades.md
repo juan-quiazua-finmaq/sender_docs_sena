@@ -1,4 +1,4 @@
-# Historico de Actividades Manuel Quiazua
+# Historico de Actividades
 
 Este es un markdown que se actualiza de manera manual, su unica funcion es alimentar el agente que dilegencia automaticamente cada una de las bitacoras que se deben de presentar al instructor de seguimiento del sena.
 ---
