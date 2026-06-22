@@ -59,11 +59,13 @@ uv run python scripts/setup.py --ai-mode
 
 ---
 
-## 2. Inferencia de memory_descriptions.md (cuando aplique)
+## 2. Inferencia de memory_descriptions.md (bitacoras y contenido de actas)
 
 **Por que:** El archivo `historico_actividades.md` contiene notas en lenguaje natural escritas por el usuario. El archivo `memory_descriptions.md` requiere un JSON enriquecido con fechas distribuidas, evidencias concretas y observaciones para actas. La inferencia manual toma 30-60 minutos por bitacora; un agente de IA puede hacerlo en segundos.
 
 **Cuando aplica:** Hay entradas en `contexto/historico_actividades.md` que **NO** tienen la marca `[DILIGENCIADA]`.
+
+**Ademas:** Se debe verificar que la seccion `actas.momento_1` exista en el JSON. Si no existe, debe inferirse el contenido a partir de TODAS las bitacoras (ver seccion 2b mas abajo).
 
 **Estructura esperada del JSON** (dentro del bloque ` ```json ... ``` ` de `contexto/memory_descriptions.md`):
 
@@ -85,14 +87,26 @@ uv run python scripts/setup.py --ai-mode
     }
   ],
   "actas": {
+    "momento_1": {
+      "resultados_aprendizaje": "<string - competencias desarrolladas consolidadas de TODAS las bitacoras>",
+      "actividades_desarrollar": "<string - actividades realizadas consolidadas de TODAS las bitacoras>",
+      "evidencias_aprendizaje": "<string - evidencias concretas consolidadas de TODAS las bitacoras>",
+      "observaciones_adicionales": "<string - resumen positivo general del desempeno>"
+    },
     "momento_2": {
       "fecha": "DD/MM/AAAA",
-      "observaciones_instructor": "<...>",
-      "observaciones_aprendiz": "<...>",
-      "observaciones_coformador": "<...>",
-      "compromisos_mejora": "<...>"
+      "observaciones_instructor": "(opcional - no implementado en script, se rellena manualmente por el instructor en Paragraph 14)",
+      "observaciones_aprendiz": "<string - primera persona, reflexivo, menciona logros>",
+      "observaciones_coformador": "<string - tercera persona, evalua actitud, positivo>",
+      "compromisos_mejora": "<string - 1-2 compromisos positivos y accionables>"
     },
-    "momento_3": { ... mismo formato ... }
+    "momento_3": {
+      "fecha": "DD/MM/AAAA",
+      "observaciones_instructor": "<string - tercera persona, evalua desempeno, positivo>",
+      "observaciones_aprendiz": "<string - primera persona, reflexivo, menciona logros>",
+      "observaciones_coformador": "<string - tercera persona, evalua actitud, positivo>",
+      "compromisos_mejora": "<string - 1-2 compromisos positivos y accionables>"
+    }
   }
 }
 ```
@@ -137,7 +151,76 @@ Tono recomendado: impersonal, tecnico, conciso (1-2 oraciones por evidencia).
 - `observaciones_instructor` y `observaciones_coformador`: tercera persona, evalua desempeno y actitud.
 - `compromisos_mejora`: 1-2 sugerencias de mejora concretas y accionables.
 
-**Restriccion:** Solo llenar `momento_2` si la fecha actual esta dentro de +-7 dias del 22/06/2026. Solo llenar `momento_3` si esta dentro de +-7 dias del 07/10/2026. Si no aplica, dejar el campo vacio.
+**Restriccion (fechas configurables):** Las fechas objetivo de los momentos se controlan por .env:
+- `ACTA_M1_FECHA` (default: 2026-04-08) - Momento 1 (Planeacion).
+- `ACTA_M2_FECHA` (default: 2026-06-22) - Momento 2 (Seguimiento).
+- `ACTA_M3_FECHA` (default: 2026-10-07) - Momento 3 (Evaluacion).
+- `ACTA_VENTANA_DIAS` (default: 7) - tolerancia en dias antes/despues de la fecha objetivo.
+
+Solo llenar `momento_1` si la fecha actual esta dentro de la ventana de `ACTA_M1_FECHA`. Solo llenar `momento_2` si esta dentro de la ventana de `ACTA_M2_FECHA`. Solo llenar `momento_3` si esta dentro de la ventana de `ACTA_M3_FECHA`. Si no aplica, dejar el campo vacio.
+
+#### Inferencia de contenido para actas (momento_1, momento_2, momento_3)
+
+Ademas de inferir bitacoras, el agente debe inferir el contenido de los tres momentos del acta a partir del historico de actividades y las bitacoras existentes.
+
+**Momento 1 (Planeacion) - Tabla 2, filas 6-9:**
+
+Cuando la fecha actual este dentro de la ventana de `ACTA_M1_FECHA`, inferir:
+
+| Campo en JSON | Campo en Acta | Como inferirlo |
+|---------------|---------------|---------------|
+| `actas.momento_1.resultados_aprendizaje` | Tabla 2 R6 | Consolidar TODAS las competencias tecnicas desarrolladas a lo largo de todas las bitacoras (1, 2, 3, ..., N). Listar tecnologias, frameworks, conceptos aprendidos. |
+| `actas.momento_1.actividades_desarrollar` | Tabla 2 R7 | Listar las actividades realizadas en TODAS las bitacoras como texto corrido y numerado. Usar el campo `descripcion` de cada actividad en `bitacoras[].actividades[]`. |
+| `actas.momento_1.evidencias_aprendizaje` | Tabla 2 R8 | Consolidar TODAS las evidencias de `bitacoras[].actividades[].evidencia` en un texto corrido. |
+| `actas.momento_1.observaciones_adicionales` | Tabla 2 R9 | Resumen positivo general del desempeno del aprendiz: proactividad, cumplimiento, adaptacion, actitud. 2-3 oraciones. |
+
+**Momento 2 (Seguimiento) - Tabla 3 + Paragraphs 14, 17, 20:**
+
+Cuando la fecha actual este dentro de la ventana de `ACTA_M2_FECHA`, inferir/verificar:
+
+| Campo en JSON | Ubicacion en Word | Como inferirlo |
+|---------------|-------------------|---------------|
+| `actas.momento_2.compromisos_mejora` | Tabla 3, R6C6 y R17C6 | 1-2 compromisos positivos y accionables basados en las actividades realizadas. Formato: "1. ... 2. ..." |
+| `actas.momento_2.observaciones_aprendiz` | Paragraph 17 | Primera persona, reflexivo. Mencionar logros tecnicos especificos del periodo. |
+| `actas.momento_2.observaciones_coformador` | Paragraph 20 | Tercera persona, evalua dedicacion, integracion al equipo, responsabilidad. Tono positivo. |
+
+> **Nota:** `observaciones_instructor` (Paragraph 14) **no** se diligencia automaticamente. El script omite este campo para que el instructor lo complete manualmente, respetando la regla de no hardcodear contenido academico sensible. El campo puede incluirse en el JSON si se desea, pero el script lo ignorara al generar el Word.
+
+**Momento 3 (Evaluacion Final) - Tabla 5 + Tablas 6, 7, 8:**
+
+Cuando la fecha actual este dentro de la ventana de `ACTA_M3_FECHA`, inferir/verificar:
+
+| Campo en JSON | Ubicacion en Word | Como inferirlo |
+|---------------|-------------------|---------------|
+| `actas.momento_3.compromisos_mejora` | Tabla 5, R6C6 y R17C6 | 1-2 compromisos positivos y accionables. Formato: "1. ... 2. ..." |
+| `actas.momento_3.observaciones_aprendiz` | Tabla 8, R2C1 | Primera persona, reflexivo, logros tecnicos del periodo completo. |
+| `actas.momento_3.observaciones_instructor` | Tabla 7 | Tercera persona, evalua desempeno y actitud. Tono positivo. |
+| `actas.momento_3.observaciones_coformador` | Tabla 6 | Tercera persona, evalua dedicacion, integracion, responsabilidad. Tono positivo. |
+
+**Reglas de tono y formato (OBLIGATORIO):**
+
+1. **Tono POSITIVO:** Nunca escribir algo negativo. Todo debe ser favorable.
+2. **Tercera persona para instructor/co-formador:** "El aprendiz demuestra...", "El aprendiz muestra...", "Muestra dedicacion...", "Se integra..."
+3. **Primera persona para aprendiz:** "Durante el periodo he desarrollado...", "He logrado...", "He fortalecido..."
+4. **Compromisos positivos y accionables:** Siempre en formato "1. [verbo infinitivo]..." (ejemplo: "1. Documentar...", "2. Profundizar...")
+5. **NO hardcodear:** NO usar textos genericos de ejemplo. El contenido debe basarse en las actividades REALES del `historico_actividades.md`.
+6. **Consolidar todo el periodo:** Para Momento 1 y Momento 3, usar TODAS las bitacoras, no solo la mas reciente.
+7. **Longitud:** 2-4 oraciones por campo. Conciso pero sustantivo.
+
+**Ejemplo de inference (no usar como plantilla literal, solo como referencia de tono):**
+
+Input (historico):
+```
+## Bitacora numero 1 - (08/04/2026 al 22/04/2026)
+- Familiarizacion con estructura de la empresa
+- Estudio de stack tecnologico
+```
+
+Output valido para `momento_1.resultados_aprendizaje`:
+> "El aprendiz desarrollo competencias en familiarizacion con entornos empresariales, comprension del stack tecnologico de la empresa y adaptacion a la cultura organizacional."
+
+Output NO valido (negativo):
+> "El aprendiz tuvo dificultades para adaptarse al stack tecnologico."
 
 ### Flujo del agente
 
@@ -146,6 +229,10 @@ Tono recomendado: impersonal, tecnico, conciso (1-2 oraciones por evidencia).
 3. Para cada entrada: extraer numero, rango, actividades; distribuir fechas; inferir evidencias; generar objeto JSON.
 4. Leer `contexto/memory_descriptions.md` actual.
 5. Hacer merge: mantener bitacoras ya diligenciadas, agregar/actualizar las nuevas.
+5b. Verificar/Completar la seccion `actas`:
+    - Si `actas.momento_1` no existe o esta vacio, inferir contenido a partir de TODAS las bitacoras (ver seccion 2b).
+    - Si la fecha actual esta en la ventana de M2 y `actas.momento_2` tiene campos vacios, inferirlos.
+    - Si la fecha actual esta en la ventana de M3 y `actas.momento_3` tiene campos vacios, inferirlos.
 6. Mostrar al usuario el JSON propuesto.
 7. Preguntar: "Esta de acuerdo con el JSON propuesto? (s/n) Si no, indique que cambiar."
 8. Si acepta: escribir el archivo.
@@ -163,6 +250,14 @@ Tono recomendado: impersonal, tecnico, conciso (1-2 oraciones por evidencia).
 - **Datos (DuckDB, polars)**: "Scripts de consulta en DuckDB y manipulacion de DataFrames utilizando Polars."
 - **SDD**: "Documento borrador de especificacion del estandar SDD preparado."
 - **Lambda/ETL**: "Prototipo funcional de la lambda con pipeline ETL implementado y probado en entorno staging."
+
+### 2.1 Advertencia: Catch-up de actas
+
+> **IMPORTANTE:** El script implementa logica de "catch-up": si al momento de ejecutar la fecha actual cae en la ventana del Momento 2 o 3, y hay actas de momentos anteriores (Momento 1) que no han sido enviadas, el script las enviara tambien. El estado de envio se persiste en `contexto/actas_enviadas.json`.
+
+Ademas, el script genera UN SOLO archivo de Word (`Actas-Inicio-Medio-Final.docx`) que contiene los tres momentos. Si ya se envio el momento 1 y luego se requiere el momento 2, el script toma el mismo archivo plantilla, diligencia los campos faltantes del momento 2 (y momento 3 si aplica), y guarda el archivo actualizado. Esto significa que el JSON en `memory_descriptions.md` debe contener TODOS los campos de los tres momentos, no solo los del momento actual.
+
+Si cambia las fechas en `.env` (`ACTA_M*_FECHA` o `ACTA_VENTANA_DIAS`), **primero revise `actas_enviadas.json`** para confirmar que el catch-up no enviara actas que usted no espera. Para forzar un reenvio de un momento especifico sin catch-up (es decir, sin enviar los momentos anteriores no enviados), edite manualmente el archivo `actas_enviadas.json` cambiando `enviada: false` en el momento deseado. Alternativamente, `--force-moment N` SI activa el catch-up — es decir, `--force-moment 3` enviara los Momentos 1, 2 y 3 si ninguno ha sido enviado.
 
 ---
 
@@ -199,6 +294,16 @@ uv run python scripts/diligenciar.py --ai-mode
 - Si falla por `memory_descriptions.md` malformado: reparar el JSON (regenerar segun paso 2) y re-ejecutar.
 
 **Exit codes:** 0 = ok, 1 = fallo de validacion de entorno (ver JSON en stdout), otro = fallo de ejecucion (ver `output/<carpeta>/ejecucion.log`).
+
+**Importante:** Tras la ejecucion, el script imprime un bloque `[CHECKLIST MANUAL]` y guarda un archivo `checklist_manual.txt` en la carpeta de cada acta. Este checklist lista los campos que el script NO puede diligenciar automaticamente:
+- **Tabla 1 (General):** Regional, Centro de formacion, Programa, datos personales del aprendiz, instructor y co-formador (el usuario debe diligenciarlos manualmente la primera vez o pedirle al agente que le pregunte los valores).
+- **Firmas:** Aprendiz, instructor seguimiento, ente co-formador (en Tabla 2 R11 / Tabla 4 / Tabla 9 segun el momento).
+- **Enlace de grabacion:** Si la reunion fue virtual, enlace en la celda correspondiente.
+Complete esos campos manualmente antes de imprimir o enviar las actas.
+
+Los campos de contenido de las actas (Momento 1 R6-R9, Momentos 2 y 3 - Valoracion X, Compromisos, Retroalimentaciones) son diligenciados automaticamente por el script usando el JSON inferido en `memory_descriptions.md`.
+
+> **Excepcion manual — Paragraph 14 (Momento 2):** La observacion del instructor en el Paragraph 14 del Word **no** se diligencia automaticamente. El script deja este campo vacio para que el instructor lo complete directamente, garantizando que la evaluacion academica sea autentica y no generada por IA.
 
 ---
 
@@ -266,14 +371,63 @@ Si el doctor detecta problemas, el agente debe informar al usuario y sugerir las
 
 ### reset.py
 
-Regenera archivos del proyecto desde cero. Util cuando algo se corrompe o se quiere empezar de nuevo.
+Regenera archivos del proyecto desde cero. Util cuando algo se corrompe, se quiere empezar de nuevo, o se prepara el sistema para un primer uso.
+
+**Comandos:**
 
 ```bash
-uv run python scripts/reset.py --all         # Todo excepto .env
-uv run python scripts/reset.py --templates   # Solo plantillas
-uv run python scripts/reset.py --context     # Solo contexto
-uv run python scripts/reset.py --env         # Solo .env
+uv run python scripts/reset.py --all                # Regenera todo (excepto .env)
+uv run python scripts/reset.py --templates          # Solo plantillas (bitacoras.xlsx, actas.docx)
+uv run python scripts/reset.py --context            # Solo contexto (historico, memory, mensaje)
+uv run python scripts/reset.py --state              # Solo estado de runtime (actas_enviadas.json)
+uv run python scripts/reset.py --output             # Solo archivos generados (output/)
+uv run python scripts/reset.py --env                # Solo .env (hace backup antes)
 uv run python scripts/reset.py --all --include-env  # Todo incluyendo .env
+uv run python scripts/reset.py --all --yes          # Sin pedir confirmacion
+uv run python scripts/reset.py --all --ai-mode      # Salida JSON para agentes
 ```
+
+**Que hace cada flag:**
+
+| Flag | Accion |
+|------|--------|
+| `--templates` | Descarga `bitacoras.xlsx` y `actas.docx` desde GitHub (con fallback a backup local) |
+| `--context` | Regenera `historico_actividades.md`, `memory_descriptions.md` y `mensaje_instructor.md` desde templates |
+| `--state` | Resetea `contexto/actas_enviadas.json` al estado inicial (todos los momentos en `enviada: false`) |
+| `--output` | Elimina todos los archivos y carpetas dentro de `output/` (bitacoras, actas, logs generados) |
+| `--env` | Regenera `.env` desde `.env.example` (con backup del actual) |
+| `--all` | Equivale a `--templates --context --state --output` (no incluye `.env` a menos que se use `--include-env`) |
+| `--yes` | No pide confirmacion al usuario |
+| `--ai-mode` | Salida JSON estructurada para que un agente de IA pueda procesarla |
+
+**Flujo de "primer uso" con reset.py:**
+
+Despues de ejecutar `uv run python scripts/reset.py --all --include-env --yes`, el sistema queda en estado de primer uso. El script imprime los siguientes pasos:
+
+```
+[OK] Reset completado. El sistema esta listo para un primer uso.
+
+Siguientes pasos para un nuevo usuario:
+  1. Configurar el entorno:
+     uv run python scripts/setup.py
+
+  2. Llenar el historico de actividades:
+     Editar contexto/historico_actividades.md con las actividades realizadas
+
+  3. Inferir el JSON enriquecido:
+     Pedirle a un agente de IA que lea instrucciones/AGENTS.md y complete
+     contexto/memory_descriptions.md (seccion bitacoras y actas).
+
+  4. Ejecutar el script principal:
+     uv run python scripts/diligenciar.py --ai-mode
+
+  5. Verificar con el doctor:
+     uv run python scripts/doctor.py
+```
+
+Si el reset falla (por ejemplo, no se puede descargar desde GitHub), el script sugiere:
+- Clonar el repositorio nuevamente
+- Restaurar los archivos manualmente
+- Usar `python scripts/reset.py --help` para ver todas las opciones
 
 Las plantillas se descargan desde GitHub. Si falla, busca un backup local. Si todo falla, sugiere clonar el repositorio.

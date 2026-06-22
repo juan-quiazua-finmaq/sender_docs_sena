@@ -19,16 +19,38 @@ SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
 
 
+def _format_moment_list(moments):
+    """Formatea una lista de números de momento como cadena estilo español.
+
+    Args:
+        moments: Lista ordenada de enteros.
+
+    Returns:
+        str: "1", "1 y 2", "1, 2 y 3", etc.
+    """
+    str_moments = [str(m) for m in moments]
+    if len(str_moments) == 1:
+        return str_moments[0]
+    elif len(str_moments) == 2:
+        return f"{str_moments[0]} y {str_moments[1]}"
+    else:
+        return ", ".join(str_moments[:-1]) + f" y {str_moments[-1]}"
+
+
 def construir_asunto(bitacoras_info, acta_moment=None):
     """Construye el asunto dinámico según los documentos generados.
 
     Args:
         bitacoras_info: Lista de diccionarios con 'numero', 'fecha_inicio', 'fecha_fin'.
-        acta_moment: Número de momento de acta (2 o 3), opcional.
+        acta_moment: Número de momento de acta (int) o lista de momentos (list[int]),
+                     opcional.
 
     Returns:
         str: Asunto del correo.
     """
+    if isinstance(acta_moment, int):
+        acta_moment = [acta_moment]
+
     if bitacoras_info:
         numeros = [str(b['numero']) for b in bitacoras_info]
         if len(numeros) == 1:
@@ -41,15 +63,27 @@ def construir_asunto(bitacoras_info, acta_moment=None):
         fecha_inicio = bitacoras_info[0]['fecha_inicio']
         fecha_fin = bitacoras_info[-1]['fecha_fin']
 
-        if acta_moment is not None:
-            return (
-                f"Bitácoras {numeros_str} y Acta Momento {acta_moment}"
-                f" — Período {fecha_inicio} al {fecha_fin}"
-            )
+        if acta_moment:
+            momentos = sorted(acta_moment)
+            if len(momentos) == 1:
+                return (
+                    f"Bitácoras {numeros_str} y Acta Momento {momentos[0]}"
+                    f" — Período {fecha_inicio} al {fecha_fin}"
+                )
+            else:
+                momentos_str = _format_moment_list(momentos)
+                return (
+                    f"Bitácoras {numeros_str} y Actas Momentos {momentos_str}"
+                    f" — Período {fecha_inicio} al {fecha_fin}"
+                )
         else:
             return f"Bitácoras {numeros_str} — Período {fecha_inicio} al {fecha_fin}"
-    elif acta_moment is not None:
-        return f"Acta Momento {acta_moment}"
+    elif acta_moment:
+        momentos = sorted(acta_moment)
+        if len(momentos) == 1:
+            return f"Acta Momento {momentos[0]}"
+        else:
+            return f"Actas Momentos {_format_moment_list(momentos)}"
     else:
         return "Documentos SENA - Automatización"
 
@@ -62,11 +96,15 @@ def construir_cuerpo(bitacoras_info, acta_moment=None):
 
     Args:
         bitacoras_info: Lista de diccionarios con 'numero', 'fecha_inicio', 'fecha_fin'.
-        acta_moment: Número de momento de acta (2 o 3), opcional.
+        acta_moment: Número de momento de acta (int) o lista de momentos (list[int]),
+                     opcional.
 
     Returns:
         str: Cuerpo del mensaje en texto plano.
     """
+    if isinstance(acta_moment, int):
+        acta_moment = [acta_moment]
+
     from datetime import datetime
 
     if os.path.exists(MENSAJE_INSTRUCTOR_PATH):
@@ -90,10 +128,16 @@ def construir_cuerpo(bitacoras_info, acta_moment=None):
         for b in bitacoras_info:
             cuerpo += f"- Bitácora {b['numero']} ({b['fecha_inicio']} al {b['fecha_fin']})\n"
 
-        if acta_moment is not None:
-            cuerpo += (
-                f"\nAdjunto también el acta correspondiente al Momento {acta_moment} (si aplica).\n"
-            )
+        if acta_moment:
+            if len(acta_moment) == 1:
+                cuerpo += (
+                    f"\nAdjunto también el acta correspondiente al Momento {acta_moment[0]} (si aplica).\n"
+                )
+            else:
+                momentos_str = _format_moment_list(sorted(acta_moment))
+                cuerpo += (
+                    f"\nAdjuntos también las actas correspondientes a los Momentos {momentos_str} (si aplica).\n"
+                )
 
         cuerpo += (
             "\nNos gustaría saber si para la próxima semana o esta tiene disponibilidad "
@@ -110,10 +154,16 @@ def construir_cuerpo(bitacoras_info, acta_moment=None):
         for b in bitacoras_info
     )
 
-    if acta_moment is not None:
-        acta_text = (
-            f"\nAdjunto también el acta correspondiente al Momento {acta_moment} (si aplica).\n"
-        )
+    if acta_moment:
+        if len(acta_moment) == 1:
+            acta_text = (
+                f"\nAdjunto también el acta correspondiente al Momento {acta_moment[0]} (si aplica).\n"
+            )
+        else:
+            momentos_str = _format_moment_list(sorted(acta_moment))
+            acta_text = (
+                f"\nAdjuntos también las actas correspondientes a los Momentos {momentos_str} (si aplica).\n"
+            )
     else:
         acta_text = ""
 

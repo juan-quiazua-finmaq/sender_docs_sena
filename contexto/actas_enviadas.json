@@ -1,0 +1,14 @@
+{
+  "momento_1": {
+    "enviada": true,
+    "fecha_envio": "2026-06-22"
+  },
+  "momento_2": {
+    "enviada": true,
+    "fecha_envio": "2026-06-22"
+  },
+  "momento_3": {
+    "enviada": false,
+    "fecha_envio": null
+  }
+}

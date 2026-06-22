@@ -4,13 +4,20 @@ env_validator.py - Modulo compartido para validar variables de entorno.
 Usado por:
     - scripts/setup.py  (wizard y modo agente)
     - scripts/diligenciar.py  (validacion previa al envio de correo)
+    - scripts/doctor.py  (diagnostico)
 
 NO escribe en .env. Solo valida y reporta.
 
 Si el modo es "ai", imprime JSON estructurado a stdout.
 Si el modo es "human", imprime mensajes legibles a stderr.
+
+Cada entrada en REQUIRED_VARS puede incluir la clave opcional "required":
+    - required: True (default si no se especifica)  -> la variable es obligatoria.
+    - required: False -> la variable es opcional; no se reporta como faltante
+      si esta vacia, pero si se reporta como invalida si tiene un valor incorrecto.
 """
 
+import datetime
 import json
 import os
 import re
@@ -26,54 +33,127 @@ REQUIRED_VARS = [
         "description": "Correo Gmail remitente desde el que se envian los documentos",
         "example": "tu-correo@gmail.com",
         "secret": False,
+        "required": True,
     },
     {
         "key": "GMAIL_APP_PASSWORD",
         "description": "Contrasena de aplicacion de Google de 16 caracteres (NO es la contrasena normal)",
         "example": "abcd efgh ijkl mnop",
         "secret": True,
+        "required": True,
     },
     {
         "key": "EMAIL_DESTINATARIO_PRODUCCION",
         "description": "Correo del instructor SENA (modo produccion)",
         "example": "instructor@sena.edu.co",
         "secret": False,
+        "required": True,
     },
     {
         "key": "EMAIL_DESTINATARIO_PRUEBAS",
         "description": "Correo para pruebas (modo pruebas)",
         "example": "tu-correo-pruebas@gmail.com",
         "secret": False,
+        "required": True,
     },
     {
         "key": "EMAIL_CC",
         "description": "Correo en copia fijo para monitorizacion",
         "example": "tu-correo-cc@gmail.com",
         "secret": False,
+        "required": True,
     },
     {
         "key": "EMAIL_MODO",
         "description": "Modo de operacion: pruebas o produccion",
         "example": "pruebas",
         "secret": False,
+        "required": True,
     },
     {
         "key": "APRENDIZ_NOMBRE",
         "description": "Tu nombre completo de aprendiz",
         "example": "Tu Nombre Completo",
         "secret": False,
+        "required": True,
     },
     {
         "key": "EMPRESA_NOMBRE",
         "description": "Nombre de la empresa donde realizas la etapa productiva",
         "example": "Nombre de tu Empresa SAS",
         "secret": False,
+        "required": True,
     },
     {
         "key": "INSTRUCTOR_NOMBRE",
         "description": "Nombre completo del instructor SENA de seguimiento",
         "example": "Nombre del Instructor",
         "secret": False,
+        "required": True,
+    },
+    # --- Variables opcionales ---
+    {
+        "key": "ACTA_M1_FECHA",
+        "description": "Fecha objetivo Momento 1 (Planeacion), formato YYYY-MM-DD",
+        "example": "2026-03-01",
+        "secret": False,
+        "required": False,
+    },
+    {
+        "key": "ACTA_M2_FECHA",
+        "description": "Fecha objetivo Momento 2 (Seguimiento), formato YYYY-MM-DD",
+        "example": "2026-05-15",
+        "secret": False,
+        "required": False,
+    },
+    {
+        "key": "ACTA_M3_FECHA",
+        "description": "Fecha objetivo Momento 3 (Evaluacion), formato YYYY-MM-DD",
+        "example": "2026-07-30",
+        "secret": False,
+        "required": False,
+    },
+    {
+        "key": "ACTA_VENTANA_DIAS",
+        "description": "Ventana de tolerancia en dias (default 7)",
+        "example": "7",
+        "secret": False,
+        "required": False,
+    },
+    {
+        "key": "FECHA_INICIO_ETAPA",
+        "description": "Fecha inicio etapa productiva, formato DD/MM/AAAA",
+        "example": "01/03/2026",
+        "secret": False,
+        "required": False,
+    },
+    {
+        "key": "FECHA_FIN_ETAPA",
+        "description": "Fecha fin etapa productiva, formato DD/MM/AAAA",
+        "example": "30/07/2026",
+        "secret": False,
+        "required": False,
+    },
+    {
+        "key": "FECHA_AFILIACION_ARL",
+        "description": "Fecha afiliacion ARL, formato DD/MM/AAAA",
+        "example": "01/03/2026",
+        "secret": False,
+        "required": False,
+    },
+    {
+        "key": "ARL_NUMERO",
+        "description": "Numero de poliza ARL",
+        "example": "123456",
+        "secret": False,
+        "required": False,
+    },
+    {
+        "key": "HORARIO_ETAPA",
+        "description": "Horario de etapa: Diurno, Nocturno o Mixto",
+        "example": "Diurno",
+        "secret": False,
+        "required": False,
     },
 ]
 
@@ -118,6 +198,54 @@ def _validate_non_empty(value: str):
     return None
 
 
+def _validate_iso_date(value):
+    """Valida formato YYYY-MM-DD (para ACTA_M*_FECHA)."""
+    if not value or not value.strip():
+        return "La fecha no puede estar vacia."
+    v = value.strip()
+    try:
+        datetime.datetime.strptime(v, "%Y-%m-%d")
+    except ValueError:
+        return f"Formato de fecha invalido: {value!r}. Debe ser YYYY-MM-DD."
+    return None
+
+
+def _validate_ddmmyyyy_date(value):
+    """Valida formato DD/MM/AAAA (para FECHA_*_ETAPA / FECHA_AFILIACION_ARL)."""
+    if not value or not value.strip():
+        return "La fecha no puede estar vacia."
+    v = value.strip()
+    try:
+        datetime.datetime.strptime(v, "%d/%m/%Y")
+    except ValueError:
+        return f"Formato de fecha invalido: {value!r}. Debe ser DD/MM/AAAA."
+    return None
+
+
+def _validate_horario(value):
+    """Valida que el horario sea Diurno, Nocturno o Mixto (case-insensitive)."""
+    if not value or not value.strip():
+        return "El horario no puede estar vacio."
+    v = value.strip().lower()
+    if v not in ("diurno", "nocturno", "mixto"):
+        return f"Horario invalido: {value!r}. Debe ser 'Diurno', 'Nocturno' o 'Mixto'."
+    return None
+
+
+def _validate_ventana_dias(value):
+    """Valida que la ventana de dias sea un entero positivo."""
+    if not value or not value.strip():
+        return "La ventana de dias no puede estar vacia."
+    v = value.strip()
+    try:
+        num = int(v)
+    except ValueError:
+        return f"Valor invalido para ventana de dias: {value!r}. Debe ser un numero entero."
+    if num <= 0:
+        return f"La ventana de dias debe ser mayor a 0. Recibido: {num}."
+    return None
+
+
 VALIDATORS = {
     "GMAIL_SENDER": _validate_email,
     "GMAIL_APP_PASSWORD": _validate_app_password,
@@ -128,6 +256,14 @@ VALIDATORS = {
     "APRENDIZ_NOMBRE": _validate_non_empty,
     "EMPRESA_NOMBRE": _validate_non_empty,
     "INSTRUCTOR_NOMBRE": _validate_non_empty,
+    "ACTA_M1_FECHA": _validate_iso_date,
+    "ACTA_M2_FECHA": _validate_iso_date,
+    "ACTA_M3_FECHA": _validate_iso_date,
+    "ACTA_VENTANA_DIAS": _validate_ventana_dias,
+    "FECHA_INICIO_ETAPA": _validate_ddmmyyyy_date,
+    "FECHA_FIN_ETAPA": _validate_ddmmyyyy_date,
+    "FECHA_AFILIACION_ARL": _validate_ddmmyyyy_date,
+    "HORARIO_ETAPA": _validate_horario,
 }
 
 
@@ -164,11 +300,21 @@ def collect_env_values(env_path=None):
 
 
 def find_missing(env_values):
-    """Retorna REQUIRED_VARS que estan vacias o con valor invalido."""
+    """Retorna REQUIRED_VARS que estan vacias o con valor invalido.
+
+    Las variables con required: False no se reportan como faltantes si estan
+    vacias, pero si se reportan si tienen un valor invalido.
+    """
     missing = []
     for var in REQUIRED_VARS:
         key = var["key"]
         value = env_values.get(key, "")
+        is_required = var.get("required", True)
+
+        # Opcionales vacias no se reportan como faltantes
+        if not is_required and not value:
+            continue
+
         validator = VALIDATORS.get(key)
         if validator is None:
             if not value:
@@ -202,8 +348,9 @@ def report_human(missing, env_path=None):
     print("         python scripts/setup.py", file=sys.stderr)
     print("[ERROR] Variables faltantes o invalidas:", file=sys.stderr)
     for var in missing:
+        label = "" if var.get("required", True) else " (opcional)"
         print(
-            f"         - {var['key']}: {var['description']} (ej: {var['example']})",
+            f"         - {var['key']}: {var['description']}{label} (ej: {var['example']})",
             file=sys.stderr,
         )
 
@@ -232,6 +379,7 @@ def report_ai(missing, env_path=None):
                     "description": v["description"],
                     "example": v["example"],
                     "secret": v["secret"],
+                    "required": v.get("required", True),
                 }
                 for v in missing
             ],
@@ -257,3 +405,12 @@ def require_env(mode="human", env_path=None):
     else:
         report_human(missing, env_path)
     return False
+
+
+def get_optional_value(key, default=None):
+    """Retorna el valor de una variable de entorno opcional o el default si no existe.
+
+    Es una funcion de conveniencia para scripts que necesiten leer variables
+    opcionales sin activar la validacion.
+    """
+    return os.environ.get(key) or default

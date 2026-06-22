@@ -265,9 +265,9 @@ def apply_calibri_9(element):
 
 def process_word_actas(moment, actas_data, execution_date_str, output_dir=None):
     """
-    Rellena el momento correspondiente (2 o 3) en el Word.
+    Rellena el momento correspondiente (1, 2 o 3) en el Word.
     """
-    if moment not in [2, 3]:
+    if moment not in [1, 2, 3]:
         print(f"[Word] Momento {moment} inválido para actas. Ignorando.")
         return
 
@@ -277,15 +277,79 @@ def process_word_actas(moment, actas_data, execution_date_str, output_dir=None):
     os.makedirs(output_dir, exist_ok=True)
     output_word_path = os.path.join(output_dir, "Actas-Inicio-Medio-Final.docx")
 
-    # --- Copiar desde la plantilla ---
-    shutil.copy2(TEMPLATE_WORD_PATH, output_word_path)
+    # --- Copiar desde la plantilla solo si no existe el archivo previo ---
+    if not os.path.exists(output_word_path):
+        shutil.copy2(TEMPLATE_WORD_PATH, output_word_path)
 
     print(f"[Word] Diligenciando Acta para Momento {moment} (Fecha ejecución: {execution_date_str}):")
     print(f"        Archivo: {output_word_path}")
 
     doc = docx.Document(output_word_path)
 
-    if moment == 2:
+    if moment == 1:
+        # --- MOMENTO 1: PLANEACIÓN ---
+        table2 = doc.tables[2]
+        fecha_inicio_etapa = os.getenv("FECHA_INICIO_ETAPA", "").strip()
+        fecha_fin_etapa = os.getenv("FECHA_FIN_ETAPA", "").strip()
+        fecha_afiliacion_arl = os.getenv("FECHA_AFILIACION_ARL", "").strip()
+        arl_numero = os.getenv("ARL_NUMERO", "").strip()
+        horario = os.getenv("HORARIO_ETAPA", "").strip()
+
+        # R1, C1 — Fecha inicio etapa productiva
+        table2.rows[1].cells[1].text = fecha_inicio_etapa
+        apply_calibri_9(table2.rows[1].cells[1])
+
+        # R1, C7 — Fecha fin etapa productiva
+        table2.rows[1].cells[7].text = fecha_fin_etapa
+        apply_calibri_9(table2.rows[1].cells[7])
+
+        # R1, C12 — Fecha afiliación ARL (opcional)
+        if fecha_afiliacion_arl:
+            table2.rows[1].cells[12].text = fecha_afiliacion_arl
+            apply_calibri_9(table2.rows[1].cells[12])
+
+        # R2, C3 — Número de póliza ARL (opcional)
+        if arl_numero:
+            table2.rows[2].cells[3].text = arl_numero
+            apply_calibri_9(table2.rows[2].cells[3])
+
+        # R2, C11 — Horario (opcional)
+        if horario:
+            table2.rows[2].cells[11].text = horario
+            apply_calibri_9(table2.rows[2].cells[11])
+
+        # R6-R9: Contenido inferido para Momento 1 (si existe en JSON)
+        momento1_data = actas_data.get('actas', {}).get('momento_1', {})
+        if momento1_data:
+            # R6: Resultados de aprendizaje
+            resultados = momento1_data.get('resultados_aprendizaje', '')
+            if resultados:
+                table2.rows[6].cells[2].text = resultados
+                apply_calibri_9(table2.rows[6].cells[2])
+            # R7: Actividades a desarrollar
+            actividades = momento1_data.get('actividades_desarrollar', '')
+            if actividades:
+                table2.rows[7].cells[2].text = actividades
+                apply_calibri_9(table2.rows[7].cells[2])
+            # R8: Evidencias de aprendizaje
+            evidencias = momento1_data.get('evidencias_aprendizaje', '')
+            if evidencias:
+                table2.rows[8].cells[2].text = evidencias
+                apply_calibri_9(table2.rows[8].cells[2])
+            # R9: Observaciones adicionales
+            obs_adicionales = momento1_data.get('observaciones_adicionales', '')
+            if obs_adicionales:
+                table2.rows[9].cells[2].text = obs_adicionales
+                apply_calibri_9(table2.rows[9].cells[2])
+            print("        [Momento 1] Contenido inferido aplicado (R6-R9).")
+
+        # P10 — Fecha de diligenciamiento
+        doc.paragraphs[10].text = f"Ciudad: Bogotá D.C.  y fecha de diligenciamiento: {execution_date_str} de forma presencial ___ o virtual   X"
+        apply_calibri_9(doc.paragraphs[10])
+
+        print("        [Momento 1] Tabla 2 rellenada (fechas, ARL, horario, contenido inferido R6-R9), párrafo P10 actualizado.")
+
+    elif moment == 2:
         # --- MOMENTO 2: SEGUIMIENTO ---
         # 1. Rellenar marcas X en Tabla 3 (Seguimiento).
         table3 = doc.tables[3]
@@ -307,6 +371,13 @@ def process_word_actas(moment, actas_data, execution_date_str, output_dir=None):
         doc.paragraphs[17].text = f"  {actas_data['actas']['momento_2']['observaciones_aprendiz']}"
         apply_calibri_9(doc.paragraphs[17])
 
+        # P20: Retroalimentación entre co-formador (inferencia)
+        coformador_m2 = actas_data.get('actas', {}).get('momento_2', {}).get('observaciones_coformador', '')
+        if coformador_m2:
+            doc.paragraphs[20].text = f"  {coformador_m2}"
+            apply_calibri_9(doc.paragraphs[20])
+            print("        [Momento 2] Retroalimentación co-formador aplicada (P20).")
+
         # 4. Compromisos de mejora en Tabla 3, columna "Observaciones / Compromisos de mejora"
         compromisos = actas_data['actas']['momento_2'].get('compromisos_mejora', '')
         if compromisos:
@@ -320,7 +391,7 @@ def process_word_actas(moment, actas_data, execution_date_str, output_dir=None):
         doc.paragraphs[22].text = f"Ciudad: Bogotá D.C.  y fecha de diligenciamiento: {execution_date_str} de forma presencial ___ o virtual   X "
         apply_calibri_9(doc.paragraphs[22])
 
-        print("        [Momento 2] Tabla 3 rellenada, observaciones del aprendiz insertadas, "
+        print("        [Momento 2] Tabla 3 rellenada, observaciones del aprendiz insertadas, retroalimentación co-formador aplicada (P17, P20), "
               "compromisos de mejora agregados, párrafo P22 actualizado.")
 
     elif moment == 3:
@@ -346,13 +417,27 @@ def process_word_actas(moment, actas_data, execution_date_str, output_dir=None):
         for p in table5.rows[1].cells[10].paragraphs:
             p.alignment = docx.enum.text.WD_ALIGN_PARAGRAPH.CENTER
 
-        # 4. NO rellenar Tablas 6 (co-formador) ni 7 (instructor).
+        # 4. Rellenar Tablas 6 (co-formador) y 7 (instructor) via inferencia JSON.
         #    SÍ rellenar Tabla 8 (aprendiz).
         table8 = doc.tables[8]
-        table8.rows[1].cells[1].text = f"He fortalecido mis bases de ingeniería y he aprendido a desarrollar con altos estándares de calidad, logrando cumplir mis objetivos."
-        apply_calibri_9(table8.rows[1].cells[1])
         table8.rows[2].cells[1].text = f"{actas_data['actas']['momento_3']['observaciones_aprendiz']}"
         apply_calibri_9(table8.rows[2].cells[1])
+
+        # Tabla 6: Retroalimentación entre co-formador (inferencia)
+        coformador_m3 = actas_data.get('actas', {}).get('momento_3', {}).get('observaciones_coformador', '')
+        if coformador_m3:
+            table6 = doc.tables[6]
+            table6.rows[1].cells[1].text = coformador_m3
+            apply_calibri_9(table6.rows[1].cells[1])
+            print("        [Momento 3] Retroalimentación co-formador aplicada (Tabla 6).")
+
+        # Tabla 7: Retroalimentación instructor de seguimiento (inferencia)
+        instructor_m3 = actas_data.get('actas', {}).get('momento_3', {}).get('observaciones_instructor', '')
+        if instructor_m3:
+            table7 = doc.tables[7]
+            table7.rows[1].cells[1].text = instructor_m3
+            apply_calibri_9(table7.rows[1].cells[1])
+            print("        [Momento 3] Retroalimentación instructor aplicada (Tabla 7).")
 
         # 5. Compromisos de mejora en Tabla 5, columna "Observaciones / Compromisos de mejora"
         compromisos = actas_data['actas']['momento_3'].get('compromisos_mejora', '')
@@ -373,7 +458,7 @@ def process_word_actas(moment, actas_data, execution_date_str, output_dir=None):
         doc.paragraphs[33].text = f"\tEl momento 3 – Evaluación se llevó a cabo en la ciudad: Bogotá D.C. con fecha de diligenciamiento: {execution_date_str} de forma presencial ___ o virtual   X "
         apply_calibri_9(doc.paragraphs[33])
 
-        print("        [Momento 3] Tabla 5 rellenada, tabla 8 actualizada (aprendiz), "
+        print("        [Momento 3] Tabla 5 rellenada, tabla 6 (co-formador) y tabla 7 (instructor) actualizadas, tabla 8 (aprendiz) actualizada, "
               "compromisos de mejora agregados, juicio de evaluación marcado Aprobado, párrafo P33 actualizado.")
 
     doc.save(output_word_path)
@@ -381,10 +466,72 @@ def process_word_actas(moment, actas_data, execution_date_str, output_dir=None):
     return output_word_path
 
 
+# --- Estado de actas enviadas ---
+_DEFAULT_ACTAS_STATE = {
+    "momento_1": {"enviada": False, "fecha_envio": None},
+    "momento_2": {"enviada": False, "fecha_envio": None},
+    "momento_3": {"enviada": False, "fecha_envio": None},
+}
+ACTAS_STATE_PATH = os.path.join(WORK_DIR, "actas_enviadas.json")
+
+
+def load_actas_state(state_path=None):
+    if state_path is None:
+        state_path = ACTAS_STATE_PATH
+    if not os.path.exists(state_path):
+        return {k: dict(v) for k, v in _DEFAULT_ACTAS_STATE.items()}
+    try:
+        with open(state_path, 'r', encoding='utf-8') as f:
+            state = json.load(f)
+    except (json.JSONDecodeError, OSError) as e:
+        print(f"[Warning] Error al leer {state_path}: {e}", file=sys.stderr)
+        return {k: dict(v) for k, v in _DEFAULT_ACTAS_STATE.items()}
+    for key in ("momento_1", "momento_2", "momento_3"):
+        if key not in state:
+            state[key] = dict(_DEFAULT_ACTAS_STATE[key])
+    return state
+
+
+def save_actas_state(state, state_path=None):
+    if state_path is None:
+        state_path = ACTAS_STATE_PATH
+    parent = os.path.dirname(state_path)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+    with open(state_path, 'w', encoding='utf-8') as f:
+        json.dump(state, f, indent=2, ensure_ascii=False)
+        f.write('\n')
+
+
+def mark_acta_enviada(state, moment, fecha_iso=None):
+    moment_key = f"momento_{moment}"
+    if fecha_iso is None:
+        fecha_iso = datetime.date.today().isoformat()
+    new_state = dict(state)
+    new_state[moment_key] = {"enviada": True, "fecha_envio": fecha_iso}
+    return new_state
+
+
+def reset_actas_state(state):
+    return {k: dict(v) for k, v in _DEFAULT_ACTAS_STATE.items()}
+
+
 def main():
     parser = argparse.ArgumentParser(description="Automatización de documentos SENA (Excel y Word).")
     parser.add_argument("--date", type=str, default=None, help="Forzar fecha de ejecución (YYYY-MM-DD).")
-    parser.add_argument("--force-moment", type=int, choices=[2, 3], default=None, help="Forzar el diligenciamiento de un acta (Word).")
+    parser.add_argument(
+        "--force-moment",
+        type=int,
+        choices=[1, 2, 3],
+        default=None,
+        help=(
+            "Forzar el diligenciamiento de actas (Word). Acepta 1 (Planeacion), 2 (Seguimiento), "
+            "3 (Evaluacion). Por defecto la fecha de ejecucion determina el momento via la ventana. "
+            "ADVERTENCIA: --force-moment N activa el catch-up — si hay momentos anteriores (<= N) "
+            "no enviados, tambien se enviaran en la misma ejecucion. Use --force-moment solo "
+            "cuando quiera reenviar un momento especifico (revise contexto/actas_enviadas.json antes)."
+        ),
+    )
     parser.add_argument("--dry-run", action="store_true", help="Analizar markdown y memoria sin escribir archivos.")
     parser.add_argument("--no-email", action="store_true", help="No enviar correo electrónico al finalizar.")
     parser.add_argument(
@@ -478,47 +625,92 @@ def main():
             # Marcar en markdown
             mark_bitacora_as_diligenced(pending_num)
 
-    # 4. Procesar actas de Word
-    target_moment = None
+    # 4. Procesar actas de Word (catch-up: enviar todas las pendientes <= momento actual)
+    # 4.1. Resolver fechas configurables (.env) con defaults hardcodeados
+    def _parse_env_iso_date(key, default):
+        """Lee una fecha YYYY-MM-DD de .env. Si falta o es inválida, retorna default y avisa."""
+        raw = os.getenv(key, "").strip()
+        if not raw:
+            return default
+        try:
+            return datetime.datetime.strptime(raw, "%Y-%m-%d").date()
+        except ValueError:
+            print(f"[Advertencia] {key}='{raw}' no es YYYY-MM-DD válido. Usando default {default}.")
+            return default
+
+    m1_date = _parse_env_iso_date("ACTA_M1_FECHA", datetime.date(2026, 4, 8))
+    m2_date = _parse_env_iso_date("ACTA_M2_FECHA", datetime.date(2026, 6, 22))
+    m3_date = _parse_env_iso_date("ACTA_M3_FECHA", datetime.date(2026, 10, 7))
+    try:
+        ventana = int(os.getenv("ACTA_VENTANA_DIAS", "7").strip())
+    except ValueError:
+        print("[Advertencia] ACTA_VENTANA_DIAS no es entero válido. Usando 7.")
+        ventana = 7
+
+    # 4.2. Determinar "momento actual" según la fecha de ejecución
+    current_moment = None
+    if abs((exec_date - m1_date).days) <= ventana:
+        current_moment = 1
+    elif abs((exec_date - m2_date).days) <= ventana:
+        current_moment = 2
+    elif abs((exec_date - m3_date).days) <= ventana:
+        current_moment = 3
+
+    # --force-moment sobrescribe current_moment (ignora ventana de fecha).
+    # NOTA: el catch-up sigue activo — si N=3 y M1 y M2 no han sido enviadas,
+    # se generaran las TRES actas (M1, M2, M3) en una sola ejecucion.
     if args.force_moment:
-        target_moment = args.force_moment
+        current_moment = args.force_moment
+        if current_moment not in (1, 2, 3):
+            raise ValueError(f"--force-moment debe ser 1, 2 o 3. Recibido: {current_moment}")
+
+    # 4.3. Cargar estado y calcular momentos a enviar
+    state = load_actas_state()
+    target_moments = []
+    if current_moment is not None:
+        for m in (1, 2, 3):
+            if m <= current_moment and not state[f"momento_{m}"]["enviada"]:
+                target_moments.append(m)
     else:
-        m2_date = datetime.date(2026, 6, 22)
-        m3_date = datetime.date(2026, 10, 7)
+        # Sin current_moment: solo aplica si --force-moment fue usado
+        if args.force_moment:
+            target_moments = [args.force_moment]
 
-        diff_m2 = abs((exec_date - m2_date).days)
-        diff_m3 = abs((exec_date - m3_date).days)
+    if not target_moments:
+        print("[Estado] No hay actas pendientes para enviar.")
 
-        if diff_m2 <= 7:
-            target_moment = 2
-        elif diff_m3 <= 7:
-            target_moment = 3
-
-    word_path = None
-    word_output_dir = None
-    if target_moment:
+    # 4.4. Generar cada momento pendiente
+    word_paths = []
+    word_output_dirs = []
+    for moment in target_moments:
         if args.dry_run:
-            print(f"[Dry Run] Se diligenciaría el Acta de Word para el Momento {target_moment}.")
+            print(f"[Dry Run] Se diligenciaría el Acta de Word para el Momento {moment}.")
+            continue
+        # Carpeta de salida
+        if pending_nums and bitacora_output_dir is not None:
+            # Reusar la última carpeta de bitácora
+            moment_output_dir = bitacora_output_dir
         else:
-            # Determinar carpeta de salida para Word
-            if pending_nums and last_bitacora_data is not None:
-                # Si también hay bitácora, reusar la última carpeta de bitácora
-                word_output_dir = bitacora_output_dir
-            else:
-                # Carpeta independiente para Word
-                word_output_dir = os.path.join(
-                    OUTPUT_DIR, f"acta-momento{target_moment}-{exec_date_folder}"
-                )
-                os.makedirs(word_output_dir, exist_ok=True)
+            moment_output_dir = os.path.join(
+                OUTPUT_DIR, f"acta-momento{moment}-{exec_date_folder}"
+            )
+            os.makedirs(moment_output_dir, exist_ok=True)
+        word_path = process_word_actas(moment, memory_data, exec_date_str, output_dir=moment_output_dir)
+        all_generated_files.append(word_path)
+        word_paths.append(word_path)
+        word_output_dirs.append(moment_output_dir)
+        # Marcar como enviada en el estado
+        state = mark_acta_enviada(state, moment, fecha_iso=exec_date.isoformat())
 
-            word_path = process_word_actas(target_moment, memory_data, exec_date_str, output_dir=word_output_dir)
-            all_generated_files.append(word_path)
+    # Persistir estado de actas enviadas
+    save_actas_state(state)
+    print(f"[Estado] Estado de actas enviadas persistido en {ACTAS_STATE_PATH}")
 
     # 5. Escribir archivo de log en la carpeta de salida correspondiente
     if pending_nums and last_bitacora_data is not None:
         log_dir = bitacora_output_dir
-    elif target_moment and word_output_dir and not args.dry_run:
-        log_dir = word_output_dir
+    elif target_moments and word_output_dirs and not args.dry_run:
+        log_dir = word_output_dirs[-1]
     else:
         log_dir = None
 
@@ -531,7 +723,7 @@ def main():
                 primera = memory_data['bitacoras'][0]
                 ultima = last_bitacora_data
                 f.write(f"Período total: {primera['fecha_inicio']} - {ultima['fecha_fin']}\n")
-            f.write(f"Acta Word Momento: {target_moment if target_moment else 'N/A'}\n")
+            f.write(f"Acta Word Momentos: {target_moments if target_moments else 'N/A'}\n")
             f.write(f"Estado: COMPLETADO\n")
         print(f"[Log] Resumen guardado en {log_path}")
 
@@ -575,9 +767,9 @@ def main():
                     })
 
         asunto = construir_asunto(
-            bitacoras_info, target_moment
+            bitacoras_info, target_moments
         )
-        cuerpo = construir_cuerpo(bitacoras_info, target_moment)
+        cuerpo = construir_cuerpo(bitacoras_info, target_moments)
 
         exito, mensaje = enviar_email(
             destinatario=destinatario,
@@ -600,6 +792,60 @@ def main():
             "[Dry Run] Se habría enviado un correo electrónico"
             " con los documentos adjuntos."
         )
+
+    # 7. Checklist de campos que requieren diligenciamiento/firma manual
+    if target_moments and not args.dry_run:
+        print()
+        print("=" * 70)
+        print("[CHECKLIST MANUAL] Campos que requieren diligenciamiento/firma humana:")
+        print("=" * 70)
+        # Definir checklist por momento
+        CHECKLIST = {
+            1: [
+                "Tabla 2 R3: Enlace de grabación del momento 1 (si aplica)",
+                "Tabla 2 R11: Firmas (aprendiz, instructor seguimiento, ente co-formador)",
+            ],
+            2: [
+                "Párrafo 14: Observaciones del instructor de seguimiento (texto en blanco, lo llena el instructor)",
+                "Tabla 3 R2: Enlace de grabación del momento 2 (si aplica)",
+                "Tabla 4: Firmas (aprendiz, instructor seguimiento, ente co-formador)",
+            ],
+            3: [
+                "Tabla 5 R2: Enlace de grabación del momento 3 (si aplica)",
+                "Tabla 9: Firmas (aprendiz, instructor seguimiento, ente co-formador)",
+            ],
+        }
+        # Checklist general (Tabla 1) - aplica a TODOS los momentos
+        print("GENERAL (Tabla 1 - aplica a todos los momentos):")
+        print("  - Regional, Centro de formación, Programa de formación")
+        print("  - Datos del aprendiz: documento, teléfono, dirección, correos")
+        print("  - Datos del instructor: teléfono, correo institucional")
+        print("  - Datos del ente co-formador: dirección, NIT, correo, jefe, cargo, teléfono")
+        for m in target_moments:
+            print(f"\nMOMENTO {m}:")
+            for item in CHECKLIST.get(m, []):
+                print(f"  - {item}")
+        print("=" * 70)
+        # Guardar checklist en cada carpeta de salida de acta
+        for d in word_output_dirs:
+            checklist_path = os.path.join(d, "checklist_manual.txt")
+            try:
+                with open(checklist_path, 'w', encoding='utf-8') as f:
+                    f.write("CHECKLIST MANUAL - Campos que requieren diligenciamiento/firma humana\n")
+                    f.write("=" * 70 + "\n\n")
+                    f.write("GENERAL (Tabla 1 - aplica a todos los momentos):\n")
+                    f.write("  - Regional, Centro de formación, Programa de formación\n")
+                    f.write("  - Datos del aprendiz: documento, teléfono, dirección, correos\n")
+                    f.write("  - Datos del instructor: teléfono, correo institucional\n")
+                    f.write("  - Datos del ente co-formador: dirección, NIT, correo, jefe, cargo, teléfono\n\n")
+                    for m in target_moments:
+                        f.write(f"MOMENTO {m}:\n")
+                        for item in CHECKLIST.get(m, []):
+                            f.write(f"  - {item}\n")
+                        f.write("\n")
+                print(f"[Checklist] Guardado en {checklist_path}")
+            except OSError as e:
+                print(f"[Checklist] No se pudo escribir {checklist_path}: {e}")
 
     print(f"=== AUTOMATIZACIÓN SENA FINALIZADA CON ÉXITO ===")
 

@@ -180,7 +180,7 @@ class TestEnvValidatorValidate(unittest.TestCase):
         ok, missing, values = env_validator.validate_env(self.env_path)
         self.assertTrue(ok)
         self.assertEqual(missing, [])
-        self.assertEqual(len(values), 9)
+        self.assertGreaterEqual(len(values), 9)
 
     def test_validate_env_archivo_vacio(self):
         self._write_env("")

@@ -1,0 +1,358 @@
+﻿uv : test_actas_state_helpers (test_diligenciar.TestDiligenciarAutomation.test_actas_state_helpers)
+En línea: 1 Carácter: 66
++ ... _docs_sena"; uv run python -m unittest discover tests -v 2>&1 | Out-F ...
++                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (test_actas_stat..._state_helpers):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Verifica mark_acta_enviada, reset_actas_state, e inmutabilidad del estado. ... ok
+test_calibri_9_application (test_diligenciar.TestDiligenciarAutomation.test_calibri_9_application)
+Verifica que la funci¾n apply_calibri_9 funciona correctamente ... ok
+test_email_module_lista_momentos (test_diligenciar.TestDiligenciarAutomation.test_email_module_lista_momentos)
+construir_asunto with list of moments produces plural 'Actas Momentos'. ... ok
+test_email_module_single_momento_backward_compat 
+(test_diligenciar.TestDiligenciarAutomation.test_email_module_single_momento_backward_compat)
+construir_asunto with int still works (backward compat). ... ok
+test_env_validator_optional_vars (test_diligenciar.TestDiligenciarAutomation.test_env_validator_optional_vars)
+Optional vars: absent=ok, invalid=reported, valid=ok. ... ok
+test_excel_integration (test_diligenciar.TestDiligenciarAutomation.test_excel_integration)
+Prueba de integraci¾n actualizada para Refactor v2: ... ERROR
+test_get_all_undiligenced_bitacoras_multiples_pendientes 
+(test_diligenciar.TestDiligenciarAutomation.test_get_all_undiligenced_bitacoras_multiples_pendientes)
+Retorna los n·meros de todas las bitßcoras pendientes. ... ok
+test_get_all_undiligenced_bitacoras_todas_diligenciadas 
+(test_diligenciar.TestDiligenciarAutomation.test_get_all_undiligenced_bitacoras_todas_diligenciadas)
+Retorna lista vacÝa si todas las bitßcoras estßn diligenciadas. ... ok
+test_get_all_undiligenced_bitacoras_todas_pendientes 
+(test_diligenciar.TestDiligenciarAutomation.test_get_all_undiligenced_bitacoras_todas_pendientes)
+Retorna todas las bitßcoras si ninguna estß diligenciada, en orden. ... ok
+test_get_next_undiligenced_bitacora (test_diligenciar.TestDiligenciarAutomation.test_get_next_undiligenced_bitacora)
+Verifica que get_next_undiligenced_bitacora identifique correctamente la bitßcora pendiente ... ok
+test_load_actas_state_invalid_json (test_diligenciar.TestDiligenciarAutomation.test_load_actas_state_invalid_json)
+Malformed JSON returns fresh state and emits warning to stderr. ... ok
+test_load_actas_state_missing_file (test_diligenciar.TestDiligenciarAutomation.test_load_actas_state_missing_file)
+When file doesn't exist, returns fresh state with all enviada=False. ... ok
+test_load_actas_state_missing_keys (test_diligenciar.TestDiligenciarAutomation.test_load_actas_state_missing_keys)
+JSON with only momento_1 fills missing momento_2/3 with defaults. ... ok
+test_mark_bitacora_as_diligenced (test_diligenciar.TestDiligenciarAutomation.test_mark_bitacora_as_diligenced)
+Verifica que mark_bitacora_as_diligenced marque la bitßcora correspondiente en el markdown ... ok
+test_max_7_activities (test_diligenciar.TestDiligenciarAutomation.test_max_7_activities)
+Verifica que se trunca a 7 actividades y emite advertencia cuando hay mßs. ... ERROR
+test_momento_1_does_not_touch_firmas (test_diligenciar.TestDiligenciarAutomation.test_momento_1_does_not_touch_firmas)
+Momento 1 no auto-rellena firmas (Tabla 2 R11). ... ok
+test_momento_1_word_integration (test_diligenciar.TestDiligenciarAutomation.test_momento_1_word_integration)
+Verifica que process_word_actas(1, ...) rellena Tabla 2 y P10. ... ok
+test_output_folder_creation (test_diligenciar.TestDiligenciarAutomation.test_output_folder_creation)
+Verifica que se crea la carpeta output/bitacora<N>-<fecha>/ al ejecutar ... ERROR
+test_parse_memory_descriptions (test_diligenciar.TestDiligenciarAutomation.test_parse_memory_descriptions)
+Verifica que la funci¾n parse_memory_descriptions extraiga el JSON correctamente ... FAIL
+test_parse_memory_descriptions_archivo_no_existe 
+(test_diligenciar.TestDiligenciarAutomation.test_parse_memory_descriptions_archivo_no_existe)
+Falla con FileNotFoundError si el archivo no existe. ... ok
+test_parse_memory_descriptions_json_malformado 
+(test_diligenciar.TestDiligenciarAutomation.test_parse_memory_descriptions_json_malformado)
+Falla si el JSON dentro del bloque estß malformado. ... ok
+test_parse_memory_descriptions_sin_bloque_json 
+(test_diligenciar.TestDiligenciarAutomation.test_parse_memory_descriptions_sin_bloque_json)
+Falla con ValueError si no hay bloque ```json ... ```. ... ok
+test_word_compromisos_mejora_momento_2 
+(test_diligenciar.TestDiligenciarAutomation.test_word_compromisos_mejora_momento_2)
+Verifica especÝficamente que los compromisos de mejora se insertan ... ok
+test_word_compromisos_mejora_momento_3 
+(test_diligenciar.TestDiligenciarAutomation.test_word_compromisos_mejora_momento_3)
+Verifica especÝficamente que los compromisos de mejora se insertan ... ok
+test_word_integration_momento_2 (test_diligenciar.TestDiligenciarAutomation.test_word_integration_momento_2)
+Prueba de integraci¾n actualizada para Refactor v2 ù Momento 2: ... ok
+test_word_integration_momento_3 (test_diligenciar.TestDiligenciarAutomation.test_word_integration_momento_3)
+Prueba de integraci¾n actualizada para Refactor v2 ù Momento 3: ... ok
+test_word_template_not_modified (test_diligenciar.TestDiligenciarAutomation.test_word_template_not_modified)
+Verifica que la plantilla original (actas.docx) NO se modifica ... ok
+test_check_bitacoras_pendientes (test_doctor.TestDoctorChecks.test_check_bitacoras_pendientes)
+Cuando historico tiene bitacoras, retorna lista de numeros pendientes. ... ok
+test_check_bitacoras_pendientes_all_diligenciadas 
+(test_doctor.TestDoctorChecks.test_check_bitacoras_pendientes_all_diligenciadas)
+Cuando todas tienen [DILIGENCIADA], retorna lista vacia. ... ok
+test_check_bitacoras_pendientes_sin_archivo (test_doctor.TestDoctorChecks.test_check_bitacoras_pendientes_sin_archivo)
+Si el historico no existe, retorna ok con lista vacia. ... ok
+test_check_context_files_missing (test_doctor.TestDoctorChecks.test_check_context_files_missing)
+Con 1+ archivos faltantes, retorna status='critical'. ... ok
+test_check_context_files_ok (test_doctor.TestDoctorChecks.test_check_context_files_ok)
+Con los 3 archivos presentes, retorna status='ok'. ... ok
+test_check_env_incomplete (test_doctor.TestDoctorChecks.test_check_env_incomplete)
+Con .env vacio, retorna status='issues' con 9 missing keys. ... ok
+test_check_env_ok (test_doctor.TestDoctorChecks.test_check_env_ok)
+Con las 9 variables configuradas, retorna status='ok'. ... ok
+test_check_mensaje_instructor_file_missing (test_doctor.TestDoctorChecks.test_check_mensaje_instructor_file_missing)
+Si el archivo no existe, retorna status='critical'. ... ok
+test_check_mensaje_instructor_missing_placeholders 
+(test_doctor.TestDoctorChecks.test_check_mensaje_instructor_missing_placeholders)
+Con placeholders faltantes, retorna status='issues'. ... ok
+test_check_mensaje_instructor_ok (test_doctor.TestDoctorChecks.test_check_mensaje_instructor_ok)
+Con los 5 placeholders presentes, retorna status='ok'. ... ok
+test_check_templates_missing (test_doctor.TestDoctorChecks.test_check_templates_missing)
+Con archivos faltantes, retorna status='critical' con sugerencia. ... ok
+test_check_templates_ok (test_doctor.TestDoctorChecks.test_check_templates_ok)
+Con ambos archivos presentes, retorna status='ok'. ... ok
+test_doctor_ai_mode_runs (test_doctor.TestDoctorIntegration.test_doctor_ai_mode_runs)
+Ejecuta doctor.py --ai-mode; verifica JSON con claves esperadas. ... ok
+test_doctor_human_mode_runs (test_doctor.TestDoctorIntegration.test_doctor_human_mode_runs)
+Ejecuta doctor.py sin flags; verifica exit code y titulo. ... ok
+test_report_ai_critical (test_doctor.TestDoctorOutput.test_report_ai_critical)
+Con checks criticos, report_ai produce status='critical'. ... ok
+test_report_ai_structure (test_doctor.TestDoctorOutput.test_report_ai_structure)
+report_ai produce JSON valido con status, checks, suggestions. ... ok
+test_report_human_critical (test_doctor.TestDoctorOutput.test_report_human_critical)
+Con problemas criticos, la salida tiene [CRITICAL] y resumen. ... ok
+test_report_human_ok (test_doctor.TestDoctorOutput.test_report_human_ok)
+Cuando todo esta OK, la salida no tiene [CRITICAL] ni [ISSUES]. ... ok
+test_enviar_email_requiere_gmail_app_password 
+(test_email_module.TestCargarVariablesEntorno.test_enviar_email_requiere_gmail_app_password)
+Verifica que enviar_email retorna error si no hay GMAIL_APP_PASSWORD. ... ok
+test_enviar_email_requiere_gmail_sender 
+(test_email_module.TestCargarVariablesEntorno.test_enviar_email_requiere_gmail_sender)
+Verifica que enviar_email falla con ValueError si no hay GMAIL_SENDER. ... ok
+test_smtp_constants (test_email_module.TestCargarVariablesEntorno.test_smtp_constants)
+Verifica que las constantes SMTP del m¾dulo son correctas. ... ok
+test_construir_asunto_bitacoras_y_acta (test_email_module.TestConstruirAsunto.test_construir_asunto_bitacoras_y_acta)
+Verifica el asunto con bitßcoras y acta. ... ok
+test_construir_asunto_dos_bitacoras (test_email_module.TestConstruirAsunto.test_construir_asunto_dos_bitacoras)
+Verifica el formato del asunto con dos bitßcoras. ... ok
+test_construir_asunto_solo_acta (test_email_module.TestConstruirAsunto.test_construir_asunto_solo_acta)
+Verifica el formato del asunto cuando solo hay acta. ... ok
+test_construir_asunto_tres_bitacoras (test_email_module.TestConstruirAsunto.test_construir_asunto_tres_bitacoras)
+Verifica el formato del asunto con tres bitßcoras. ... ok
+test_construir_asunto_una_bitacora (test_email_module.TestConstruirAsunto.test_construir_asunto_una_bitacora)
+Verifica el formato del asunto con una sola bitßcora. ... ok
+test_construir_asunto_vacio (test_email_module.TestConstruirAsunto.test_construir_asunto_vacio)
+Verifica el asunto cuando no hay bitßcoras ni acta. ... ok
+test_fallback_a_mensaje_hardcoded_si_no_existe 
+(test_email_module.TestConstruirCuerpo.test_fallback_a_mensaje_hardcoded_si_no_existe)
+Sin archivo de plantilla, debe usar el mensaje hardcoded original. ... ok
+test_incluye_acta_si_acta_moment_no_es_none 
+(test_email_module.TestConstruirCuerpo.test_incluye_acta_si_acta_moment_no_es_none)
+Con acta_moment=2, debe incluir referencia al Momento 2. ... ok
+test_omite_acta_si_acta_moment_es_none (test_email_module.TestConstruirCuerpo.test_omite_acta_si_acta_moment_es_none)
+Con acta_moment=None, no debe incluir texto de acta ni placeholder. ... ok
+test_reemplaza_destinatario (test_email_module.TestConstruirCuerpo.test_reemplaza_destinatario)
+Verifica que {{destinatario}} fue reemplazado (no queda placeholder). ... ok
+test_reemplaza_firma (test_email_module.TestConstruirCuerpo.test_reemplaza_firma)
+Verifica que {{firma}} se reemplaza por el nombre real. ... ok
+test_reemplaza_lista_bitacoras (test_email_module.TestConstruirCuerpo.test_reemplaza_lista_bitacoras)
+Verifica que {{lista_bitacoras}} se reemplaza con la lista de bitßcoras. ... ok
+test_usa_plantilla_markdown_si_existe (test_email_module.TestConstruirCuerpo.test_usa_plantilla_markdown_si_existe)
+Con archivo existente, debe usar la plantilla y NO dejar placeholders. ... ok
+test_construir_cuerpo_firma_fallback 
+(test_email_module.TestConstruirCuerpoEnvVars.test_construir_cuerpo_firma_fallback)
+Sin variables de entorno, usa valores por defecto. ... ok
+test_construir_cuerpo_firma_personalizada 
+(test_email_module.TestConstruirCuerpoEnvVars.test_construir_cuerpo_firma_personalizada)
+Verifica que con otros valores de env, la firma cambia. ... ok
+test_construir_cuerpo_usa_firma_de_env 
+(test_email_module.TestConstruirCuerpoEnvVars.test_construir_cuerpo_usa_firma_de_env)
+Verifica que la firma se construye desde las variables de entorno. ... ok
+test_enviar_email_mock_smtp (test_email_module.TestEnviarEmailMockSMTP.test_enviar_email_mock_smtp)
+Mock del envÝo SMTP: verifica la estructura del email enviado. ... ok
+test_enviar_email_sin_password_retorna_error 
+(test_email_module.TestEnviarEmailMockSMTP.test_enviar_email_sin_password_retorna_error)
+Si no hay GMAIL_APP_PASSWORD, retorna error sin intentar SMTP. ... ok
+test_enviar_email_sin_sender_raises_value_error 
+(test_email_module.TestEnviarEmailMockSMTP.test_enviar_email_sin_sender_raises_value_error)
+Si no hay GMAIL_SENDER, lanza ValueError con mensaje claro. ... ok
+test_enviar_email_falla_autenticacion_3_veces 
+(test_email_module.TestEnviarEmailReintentos.test_enviar_email_falla_autenticacion_3_veces)
+Verifica comportamiento ante fallo de autenticaci¾n persistente. ... ok
+test_enviar_email_reintento_exitoso_en_segundo_intento 
+(test_email_module.TestEnviarEmailReintentos.test_enviar_email_reintento_exitoso_en_segundo_intento)
+Verifica que si falla el 1er intento pero el 2do funciona, retorna Úxito. ... ok
+test_enviar_email_reintentos_automaticos 
+(test_email_module.TestEnviarEmailReintentos.test_enviar_email_reintentos_automaticos)
+Verifica que se reintentan 3 veces ante fallo de conexi¾n. ... ok
+test_reset_context_creates_files (test_reset.TestResetContext.test_reset_context_creates_files)
+reset_context() crea los 3 archivos con contenido esperado. ... ok
+test_reset_env_backs_up_existing (test_reset.TestResetEnv.test_reset_env_backs_up_existing)
+Con .env existente, crea backup antes de sobrescribir. ... ok
+test_reset_env_creates_from_example (test_reset.TestResetEnv.test_reset_env_creates_from_example)
+Con .env.example existente, crea .env con el mismo contenido. ... ok
+test_reset_env_sin_example_falla (test_reset.TestResetEnv.test_reset_env_sin_example_falla)
+Sin .env.example, retorna False. ...   [FAIL] No se encontro 
+C:\Users\JUANQU~1\AppData\Local\Temp\tmp2jusbpg0\.env.example.
+ok
+test_reset_help (test_reset.TestResetMain.test_reset_help)
+--help muestra todas las opciones disponibles. ... ok
+test_copy_from_backup_missing (test_reset.TestResetTemplateDownload.test_copy_from_backup_missing)
+Sin archivo backup, retorna False. ... ok
+test_copy_from_backup_success (test_reset.TestResetTemplateDownload.test_copy_from_backup_success)
+Con archivo backup existente, la copia funciona. ... ok
+test_download_from_github_404 (test_reset.TestResetTemplateDownload.test_download_from_github_404)
+Con error HTTP, retorna False y NO crea archivo. ...   [WARN] No se pudo descargar test_file.xlsx desde GitHub: HTTP 
+Error 404: Not Found
+ok
+test_download_from_github_success (test_reset.TestResetTemplateDownload.test_download_from_github_success)
+Con respuesta 200, el archivo se crea en destino. ... ok
+test_collect_env_values_fallback_file (test_setup.TestEnvValidatorParse.test_collect_env_values_fallback_file)
+Si no esta en environ, leer del archivo. ... ok
+test_collect_env_values_precedence_environ 
+(test_setup.TestEnvValidatorParse.test_collect_env_values_precedence_environ)
+os.environ debe tener prioridad sobre el archivo. ... ok
+test_parse_env_file_basico (test_setup.TestEnvValidatorParse.test_parse_env_file_basico) ... ok
+test_parse_env_file_ignora_lineas_invalidas 
+(test_setup.TestEnvValidatorParse.test_parse_env_file_ignora_lineas_invalidas) ... ok
+test_parse_env_file_no_existe (test_setup.TestEnvValidatorParse.test_parse_env_file_no_existe) ... ok
+test_report_ai_incomplete (test_setup.TestEnvValidatorReporting.test_report_ai_incomplete) ... ok
+test_report_ai_no_imprime_passwords (test_setup.TestEnvValidatorReporting.test_report_ai_no_imprime_passwords)
+Aunque se reporte GMAIL_APP_PASSWORD (secret=true), el output ... ok
+test_report_ai_ok (test_setup.TestEnvValidatorReporting.test_report_ai_ok) ... ok
+test_report_human_no_imprime_passwords (test_setup.TestEnvValidatorReporting.test_report_human_no_imprime_passwords)
+report_human tampoco imprime valores, solo nombres de variables. ... ok
+test_require_env_ai_mode (test_setup.TestEnvValidatorReporting.test_require_env_ai_mode)
+require_env con mode=ai debe imprimir JSON a stdout y retornar False. ... ok
+test_require_env_human_mode (test_setup.TestEnvValidatorReporting.test_require_env_human_mode)
+require_env con mode=human debe imprimir a stderr y retornar False. ... ok
+test_require_env_ok (test_setup.TestEnvValidatorReporting.test_require_env_ok)
+Si el entorno esta completo, retorna True sin output. ... ok
+test_find_missing_retorna_definiciones_completas 
+(test_setup.TestEnvValidatorValidate.test_find_missing_retorna_definiciones_completas)
+Las entradas en missing deben tener key, description, example, secret. ... ok
+test_validate_env_archivo_no_existe (test_setup.TestEnvValidatorValidate.test_validate_env_archivo_no_existe) ... ok
+test_validate_env_archivo_vacio (test_setup.TestEnvValidatorValidate.test_validate_env_archivo_vacio) ... ok
+test_validate_env_completo (test_setup.TestEnvValidatorValidate.test_validate_env_completo) ... ok
+test_validate_env_email_invalido (test_setup.TestEnvValidatorValidate.test_validate_env_email_invalido) ... ok
+test_validate_env_password_invalido (test_setup.TestEnvValidatorValidate.test_validate_env_password_invalido) ... ok
+test_validate_app_password_caracteres_invalidos 
+(test_setup.TestEnvValidatorValidators.test_validate_app_password_caracteres_invalidos) ... ok
+test_validate_app_password_muy_corto (test_setup.TestEnvValidatorValidators.test_validate_app_password_muy_corto) ... 
+ok
+test_validate_app_password_muy_largo (test_setup.TestEnvValidatorValidators.test_validate_app_password_muy_largo) ... 
+ok
+test_validate_app_password_vacio (test_setup.TestEnvValidatorValidators.test_validate_app_password_vacio) ... ok
+test_validate_app_password_valido (test_setup.TestEnvValidatorValidators.test_validate_app_password_valido) ... ok
+test_validate_email_invalido (test_setup.TestEnvValidatorValidators.test_validate_email_invalido) ... ok
+test_validate_email_vacio (test_setup.TestEnvValidatorValidators.test_validate_email_vacio) ... ok
+test_validate_email_valido (test_setup.TestEnvValidatorValidators.test_validate_email_valido) ... ok
+test_validate_modo_invalido (test_setup.TestEnvValidatorValidators.test_validate_modo_invalido) ... ok
+test_validate_modo_valido (test_setup.TestEnvValidatorValidators.test_validate_modo_valido) ... ok
+test_aprendiz_nombre_espacios (test_setup.TestNewUserVariables.test_aprendiz_nombre_espacios)
+Nombre con solo espacios retorna error. ... ok
+test_aprendiz_nombre_solo_una_palabra (test_setup.TestNewUserVariables.test_aprendiz_nombre_solo_una_palabra)
+Nombre con una sola palabra retorna error. ... ok
+test_aprendiz_nombre_vacio (test_setup.TestNewUserVariables.test_aprendiz_nombre_vacio)
+Nombre vacio retorna error. ... ok
+test_aprendiz_nombre_valido (test_setup.TestNewUserVariables.test_aprendiz_nombre_valido)
+Nombre completo valido retorna None (sin error). ... ok
+test_empresa_nombre_vacio (test_setup.TestNewUserVariables.test_empresa_nombre_vacio)
+Nombre de empresa vacio retorna error. ... ok
+test_empresa_nombre_valido (test_setup.TestNewUserVariables.test_empresa_nombre_valido)
+Nombre de empresa valido retorna None. ... ok
+test_instructor_nombre_vacio (test_setup.TestNewUserVariables.test_instructor_nombre_vacio)
+Nombre de instructor vacio retorna error. ... ok
+test_instructor_nombre_valido (test_setup.TestNewUserVariables.test_instructor_nombre_valido)
+Nombre de instructor valido retorna None. ... ok
+test_required_vars_incluye_usuario (test_setup.TestNewUserVariables.test_required_vars_incluye_usuario)
+REQUIRED_VARS incluye las 3 nuevas variables de usuario. ... ok
+test_validators_incluye_usuario (test_setup.TestNewUserVariables.test_validators_incluye_usuario)
+VALIDATORS incluye las 3 nuevas variables mapeadas a _validate_non_empty. ... ok
+test_password_no_aparece_en_output_setup_ai (test_setup.TestSecurity.test_password_no_aparece_en_output_setup_ai)
+Verifica que el JSON de setup.py --ai-mode no filtra passwords. ... ok
+test_password_no_aparece_en_report_ai (test_setup.TestSecurity.test_password_no_aparece_en_report_ai)
+El campo secret=true de la metadata nunca expone valores. ... ok
+test_ai_mode_check_no_escribe (test_setup.TestSetupAiMode.test_ai_mode_check_no_escribe)
+--check (que implica --ai-mode) no debe escribir .env si no existe. ... ok
+test_ai_mode_incomplete (test_setup.TestSetupAiMode.test_ai_mode_incomplete)
+Con .env vacio, --ai-mode imprime status=incomplete y exit code 1. ... ok
+test_ai_mode_ok (test_setup.TestSetupAiMode.test_ai_mode_ok)
+Con .env completo, --ai-mode imprime status=ok y exit code 0. ... ok
+test_ai_mode_parcial (test_setup.TestSetupAiMode.test_ai_mode_parcial)
+Con solo algunas variables, --ai-mode reporta solo las faltantes. ... ok
+
+======================================================================
+ERROR: test_excel_integration (test_diligenciar.TestDiligenciarAutomation.test_excel_integration)
+Prueba de integraci¾n actualizada para Refactor v2:
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\Juan Quiazua\Documents\Docs_SENA\sender_docs_sena\tests\test_diligenciar.py", line 237, in 
+test_excel_integration
+    bitacora_data = memory_data["bitacoras"][0]
+                    ~~~~~~~~~~~~~~~~~~~~~~~~^^^
+IndexError: list index out of range
+
+======================================================================
+ERROR: test_max_7_activities (test_diligenciar.TestDiligenciarAutomation.test_max_7_activities)
+Verifica que se trunca a 7 actividades y emite advertencia cuando hay mßs.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\Juan Quiazua\Documents\Docs_SENA\sender_docs_sena\tests\test_diligenciar.py", line 296, in 
+test_max_7_activities
+    bitacora_data = memory_data["bitacoras"][0].copy()
+                    ~~~~~~~~~~~~~~~~~~~~~~~~^^^
+IndexError: list index out of range
+
+======================================================================
+ERROR: test_output_folder_creation (test_diligenciar.TestDiligenciarAutomation.test_output_folder_creation)
+Verifica que se crea la carpeta output/bitacora<N>-<fecha>/ al ejecutar
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\Juan Quiazua\Documents\Docs_SENA\sender_docs_sena\tests\test_diligenciar.py", line 520, in 
+test_output_folder_creation
+    bitacora_data = memory_data["bitacoras"][0]
+                    ~~~~~~~~~~~~~~~~~~~~~~~~^^^
+IndexError: list index out of range
+
+======================================================================
+FAIL: test_parse_memory_descriptions (test_diligenciar.TestDiligenciarAutomation.test_parse_memory_descriptions)
+Verifica que la funci¾n parse_memory_descriptions extraiga el JSON correctamente
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\Juan Quiazua\Documents\Docs_SENA\sender_docs_sena\tests\test_diligenciar.py", line 89, in 
+test_parse_memory_descriptions
+    self.assertEqual(len(data["bitacoras"]), 3)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 0 != 3
+
+----------------------------------------------------------------------
+Ran 123 tests in 1.868s
+
+FAILED (failures=1, errors=3)
+[Estado] historico_actividades.md actualizado: Bitßcora 1 marcada como [DILIGENCIADA].
+[Word] Diligenciando Acta para Momento 1 (Fecha ejecuci¾n: 22/06/2026):
+        Archivo: C:\Users\JUANQU~1\AppData\Local\Temp\tmpy8mktjp_\output\actas\Actas-Inicio-Medio-Final.docx
+        [Momento 1] Tabla 2 rellenada (fechas, ARL, horario), pßrrafo P10 actualizado.
+[Word] Guardado exitosamente: C:\Users\JUANQU~1\AppData\Local\Temp\tmpy8mktjp_\output\actas\Actas-Inicio-Medio-Final.docx
+[Word] Diligenciando Acta para Momento 1 (Fecha ejecuci¾n: 22/06/2026):
+        Archivo: C:\Users\JUANQU~1\AppData\Local\Temp\tmpn_z8j8h7\output\actas\Actas-Inicio-Medio-Final.docx
+        [Momento 1] Tabla 2 rellenada (fechas, ARL, horario), pßrrafo P10 actualizado.
+[Word] Guardado exitosamente: C:\Users\JUANQU~1\AppData\Local\Temp\tmpn_z8j8h7\output\actas\Actas-Inicio-Medio-Final.docx
+[Word] Diligenciando Acta para Momento 2 (Fecha ejecuci¾n: 08/07/2026):
+        Archivo: C:\Users\JUANQU~1\AppData\Local\Temp\tmpjp69bnjk\output\actas\Actas-Inicio-Medio-Final.docx
+        [Momento 2] Tabla 3 rellenada, observaciones del aprendiz insertadas, compromisos de mejora agregados, pßrrafo P22 actualizado.
+[Word] Guardado exitosamente: C:\Users\JUANQU~1\AppData\Local\Temp\tmpjp69bnjk\output\actas\Actas-Inicio-Medio-Final.docx
+[Word] Diligenciando Acta para Momento 3 (Fecha ejecuci¾n: 08/10/2026):
+        Archivo: C:\Users\JUANQU~1\AppData\Local\Temp\tmphkbqyjne\output\actas\Actas-Inicio-Medio-Final.docx
+        [Momento 3] Tabla 5 rellenada, tabla 8 actualizada (aprendiz), compromisos de mejora agregados, juicio de evaluaci¾n marcado Aprobado, pßrrafo P33 actualizado.
+[Word] Guardado exitosamente: C:\Users\JUANQU~1\AppData\Local\Temp\tmphkbqyjne\output\actas\Actas-Inicio-Medio-Final.docx
+[Word] Diligenciando Acta para Momento 2 (Fecha ejecuci¾n: 08/07/2026):
+        Archivo: C:\Users\JUANQU~1\AppData\Local\Temp\tmpru6dkjqo\output\actas\Actas-Inicio-Medio-Final.docx
+        [Momento 2] Tabla 3 rellenada, observaciones del aprendiz insertadas, compromisos de mejora agregados, pßrrafo P22 actualizado.
+[Word] Guardado exitosamente: C:\Users\JUANQU~1\AppData\Local\Temp\tmpru6dkjqo\output\actas\Actas-Inicio-Medio-Final.docx
+[Word] Diligenciando Acta para Momento 3 (Fecha ejecuci¾n: 08/10/2026):
+        Archivo: C:\Users\JUANQU~1\AppData\Local\Temp\tmp4spe1phr\output\actas\Actas-Inicio-Medio-Final.docx
+        [Momento 3] Tabla 5 rellenada, tabla 8 actualizada (aprendiz), compromisos de mejora agregados, juicio de evaluaci¾n marcado Aprobado, pßrrafo P33 actualizado.
+[Word] Guardado exitosamente: C:\Users\JUANQU~1\AppData\Local\Temp\tmp4spe1phr\output\actas\Actas-Inicio-Medio-Final.docx
+[Word] Diligenciando Acta para Momento 2 (Fecha ejecuci¾n: 08/07/2026):
+        Archivo: C:\Users\JUANQU~1\AppData\Local\Temp\tmpst0o6j5w\output\actas\Actas-Inicio-Medio-Final.docx
+        [Momento 2] Tabla 3 rellenada, observaciones del aprendiz insertadas, compromisos de mejora agregados, pßrrafo P22 actualizado.
+[Word] Guardado exitosamente: C:\Users\JUANQU~1\AppData\Local\Temp\tmpst0o6j5w\output\actas\Actas-Inicio-Medio-Final.docx
+[Email] Error de autenticaci¾n (intento 1/3). Reintentando...
+[Email] Error de autenticaci¾n (intento 2/3). Reintentando...
+[Email] Error SMTP: Connection refused (intento 1/3). Reintentando...
+[Email] Error SMTP: Connection refused (intento 1/3). Reintentando...
+[Email] Error SMTP: Connection refused (intento 2/3). Reintentando...
+[Archivos de contexto]
+  [OK] historico_actividades.md regenerado.
+  [OK] memory_descriptions.md regenerado.
+  [OK] mensaje_instructor.md regenerado.
+[.env]
+  [INFO] Backup del .env actual: .env.backup-2268
+  [OK] .env regenerado desde .env.example (valores vacios, ejecute setup.py).
+[.env]
+  [OK] .env regenerado desde .env.example (valores vacios, ejecute setup.py).
+[.env]

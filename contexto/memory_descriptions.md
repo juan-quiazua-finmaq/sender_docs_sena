@@ -1,6 +1,7 @@
-# Registro de Razonamiento de IA: Descripciones, Evidencias e Inferencias de Bitácoras y Actas
+# Registro de Razonamiento: Descripciones, Evidencias e Inferencias
 
-Este archivo contiene el razonamiento contextual inferido por el agente de IA. Desacopla la inferencia de la ejecución física de los scripts de automatización.
+Este archivo contiene el razonamiento contextual inferido por el agente de IA.
+Decopla la inferencia de la ejecucion fisica de los scripts de automatizacion.
 
 ```json
 {
@@ -11,34 +12,34 @@ Este archivo contiene el razonamiento contextual inferido por el agente de IA. D
       "fecha_fin": "22/04/2026",
       "actividades": [
         {
-          "descripcion": "El aprendiz se familiarizo con la estructura general de la empresa",
+          "descripcion": "Familiarizacion con la estructura general de la empresa",
           "fecha_inicio": "08/04/2026",
           "fecha_fin": "10/04/2026",
-          "evidencia": "Organigrama de la organización y documentación de procesos del área de TI."
+          "evidencia": "Resumen de la estructura organizacional y areas de la empresa."
         },
         {
-          "descripcion": "El aprendiz estudio profundamente en el stack tecnologico general de la empresa",
+          "descripcion": "Estudio profundo del stack tecnologico general de la empresa",
           "fecha_inicio": "11/04/2026",
           "fecha_fin": "13/04/2026",
-          "evidencia": "Resumen técnico de la infraestructura de desarrollo y stack seleccionado."
+          "evidencia": "Resumen tecnico de la infraestructura de desarrollo y stack seleccionado."
         },
         {
-          "descripcion": "El aprendiz tuvo acceso a repositorios internos",
+          "descripcion": "Acceso a repositorios internos",
           "fecha_inicio": "14/04/2026",
           "fecha_fin": "16/04/2026",
           "evidencia": "Credenciales y claves SSH configuradas para repositorios de control de versiones."
         },
         {
-          "descripcion": "El aprendiz fue instruido en las politicas de seguridad de la empresa",
+          "descripcion": "Instruccion en politicas de seguridad de la empresa",
           "fecha_inicio": "17/04/2026",
           "fecha_fin": "19/04/2026",
-          "evidencia": "Certificación de lectura y aceptación de políticas de seguridad corporativas."
+          "evidencia": "Certificacion de lectura y aceptacion de politicas de seguridad corporativas."
         },
         {
-          "descripcion": "Se le asigno pequeños ejercicios para comprender el stack tecnologico",
+          "descripcion": "Ejercicios para comprender el stack tecnologico",
           "fecha_inicio": "20/04/2026",
           "fecha_fin": "22/04/2026",
-          "evidencia": "Pruebas de concepto y scripts iniciales ejecutados en el entorno local."
+          "evidencia": "Ejercicios resueltos que demuestran comprension del stack tecnologico."
         }
       ]
     },
@@ -48,26 +49,26 @@ Este archivo contiene el razonamiento contextual inferido por el agente de IA. D
       "fecha_fin": "06/05/2026",
       "actividades": [
         {
-          "descripcion": "Se le indico el plan de aprendizaje para colaborar en los equipos internos de la compañia",
+          "descripcion": "Plan de aprendizaje para colaborar en equipos internos",
           "fecha_inicio": "22/04/2026",
           "fecha_fin": "25/04/2026",
-          "evidencia": "Cronograma de aprendizaje inicial de la empresa y objetivos definidos."
+          "evidencia": "Plan de integracion a equipos documentado y cronograma de actividades."
         },
         {
-          "descripcion": "Se oriento al aprendiz en el aprendizaje de conceptos basicos relacionados con AWS",
+          "descripcion": "Aprendizaje de conceptos basicos de AWS",
           "fecha_inicio": "26/04/2026",
           "fecha_fin": "29/04/2026",
-          "evidencia": "Resumen conceptual de servicios principales (EC2, S3, RDS) y diagramas básicos."
+          "evidencia": "Resumen conceptual de servicios principales (EC2, S3, RDS) y diagramas basicos."
         },
         {
-          "descripcion": "Se oriento al aprendiz en el aprendizaje de conceptos basicos relacionados con Python (Clases, Frameworks, psycopg, FastAPI)",
+          "descripcion": "Aprendizaje de Python (Clases, Frameworks, psycopg, FastAPI)",
           "fecha_inicio": "30/04/2026",
-          "fecha_fin": "03/05/2026",
-          "evidencia": "Estructuras de clases en Python y prototipo básico de endpoints con FastAPI."
+          "fecha_fin": "02/05/2026",
+          "evidencia": "Estructuras de clases en Python y prototipo basico de endpoints con FastAPI."
         },
         {
-          "descripcion": "Se instruyo al aprendiz para realizar aprendizaje sobre arquitecturas de diseño para software de calidad",
-          "fecha_inicio": "04/05/2026",
+          "descripcion": "Arquitecturas de diseno para software de calidad",
+          "fecha_inicio": "03/05/2026",
           "fecha_fin": "06/05/2026",
           "evidencia": "Esquema conceptual de arquitectura limpia y principios SOLID analizados."
         }
@@ -79,40 +80,90 @@ Este archivo contiene el razonamiento contextual inferido por el agente de IA. D
       "fecha_fin": "20/05/2026",
       "actividades": [
         {
-          "descripcion": "Se le asigno tareas al aprendiz referente a un requerimiento para dar solucion por medio de una automatizacion de procesos internos",
+          "descripcion": "Tareas de automatizacion de procesos internos",
           "fecha_inicio": "06/05/2026",
           "fecha_fin": "10/05/2026",
-          "evidencia": "Propuesta y diseño del flujo automatizado para el requerimiento de TI."
+          "evidencia": "Propuesta y diseno del flujo automatizado para el requerimiento de TI."
         },
         {
-          "descripcion": "El aprendiz se le instruyo en el aprendizaje de heramientas para manejo de datos (DuckDB, polars)",
+          "descripcion": "Aprendizaje de herramientas para manejo de datos (DuckDB, polars)",
           "fecha_inicio": "11/05/2026",
           "fecha_fin": "15/05/2026",
-          "evidencia": "Scripts de consulta en DuckDB y manipulación de DataFrames utilizando Polars."
+          "evidencia": "Scripts de consulta en DuckDB y manipulacion de DataFrames utilizando Polars."
         },
         {
-          "descripcion": "El aprendiz aprendio a manejar el estandard de desarrollo con IA basado en especificaciones (SDD)",
+          "descripcion": "Aprendizaje del estandar SDD (Specification-Driven Development)",
           "fecha_inicio": "16/05/2026",
           "fecha_fin": "20/05/2026",
-          "evidencia": "Documento borrador de especificación del estándar SDD preparado."
+          "evidencia": "Documento borrador de especificacion del estandar SDD preparado."
+        }
+      ]
+    },
+    {
+      "numero": 4,
+      "fecha_inicio": "20/05/2026",
+      "fecha_fin": "03/06/2026",
+      "actividades": [
+        {
+          "descripcion": "Lambda para procesamiento de datos del Area de cartera (ETL)",
+          "fecha_inicio": "20/05/2026",
+          "fecha_fin": "26/05/2026",
+          "evidencia": "Prototipo funcional de la lambda con pipeline ETL implementado y probado en entorno staging."
+        },
+        {
+          "descripcion": "Instruccion en arquitectura de datos y estandares DAMA",
+          "fecha_inicio": "27/05/2026",
+          "fecha_fin": "03/06/2026",
+          "evidencia": "Resumen del marco DAMA y esquema de gobernanza de datos propuesto."
+        }
+      ]
+    },
+    {
+      "numero": 5,
+      "fecha_inicio": "03/06/2026",
+      "fecha_fin": "17/06/2026",
+      "actividades": [
+        {
+          "descripcion": "Instruccion en arquitecturas CDC (Change Data Capture)",
+          "fecha_inicio": "03/06/2026",
+          "fecha_fin": "07/06/2026",
+          "evidencia": "Documento conceptual de arquitectura CDC y patrones de implementacion."
+        },
+        {
+          "descripcion": "Identificacion y propuesta de diccionarios de datos para gobernanza",
+          "fecha_inicio": "08/06/2026",
+          "fecha_fin": "12/06/2026",
+          "evidencia": "Propuesta de diccionario de datos y modelo de metadatos para la plataforma."
+        },
+        {
+          "descripcion": "Instruccion en infraestructura para traspaso al area de infraestructura",
+          "fecha_inicio": "13/06/2026",
+          "fecha_fin": "17/06/2026",
+          "evidencia": "Diagrama de infraestructura actual y plan de migracion propuesto."
         }
       ]
     }
   ],
   "actas": {
+    "momento_1": {
+      "resultados_aprendizaje": "El aprendiz desarrollo competencias en familiarizacion con entornos empresariales, comprension del stack tecnologico (Python, FastAPI, AWS), automatizacion de procesos, manejo de datos con DuckDB y Polars, arquitectura de software (SOLID, CDC), y gobernanza de datos bajo el marco DAMA.",
+      "actividades_desarrollar": "1. Familiarizacion con la estructura y politicas de la empresa. 2. Estudio del stack tecnologico y acceso a repositorios. 3. Aprendizaje de AWS, Python y arquitecturas de diseno. 4. Desarrollo de automatizaciones y pipelines ETL. 5. Aprendizaje de herramientas de datos (DuckDB, Polars). 6. Implementacion del estandar SDD. 7. Propuesta de diccionarios de datos y gobernanza.",
+      "evidencias_aprendizaje": "Resumen de estructura organizacional, credenciales SSH configuradas, certificacion de politicas de seguridad, diagramas de servicios AWS, prototipos de endpoints FastAPI, esquemas de arquitectura limpia, flujo automatizado implementado, scripts de DuckDB y Polars, documento SDD, lambda ETL funcional, propuesta de diccionario de datos.",
+      "observaciones_adicionales": "El aprendiz demuestra proactividad, capacidad de adaptacion y compromiso con el aprendizaje continuo. Ha cumplido satisfactoriamente con todas las actividades asignadas, mostrando iniciativa en la resolucion de problemas y buena integracion al equipo de trabajo."
+    },
     "momento_2": {
       "fecha": "22/06/2026",
-      "observaciones_instructor": "El aprendiz demuestra gran interés y una curva de aprendizaje óptima en el stack tecnológico asignado. Cumple a cabalidad con las actividades propuestas.",
-      "observaciones_aprendiz": "He logrado familiarizarme con el stack de desarrollo y estoy aplicando mis conocimientos técnicos en la resolución de tareas diarias de manera efectiva.",
-      "observaciones_coformador": "El aprendiz muestra excelente actitud, puntualidad y adaptación técnica. Se desenvuelve con proactividad en las tareas que se le asignan.",
-      "compromisos_mejora": "Se sugiere reforzar la documentación técnica de los componentes implementados para facilitar el mantenimiento futuro. Se recomienda continuar con la práctica de revisiones de código periódicas."
+      "observaciones_instructor": "",
+      "observaciones_aprendiz": "Durante este periodo he fortalecido mis competencias en arquitectura de datos, implementacion de pipelines ETL y gobernanza de datos. He logrado desarrollar prototipos funcionales que aportan valor al area de cartera y he profundizado en estandares como DAMA y SDD para mejorar la calidad del desarrollo.",
+      "observaciones_coformador": "El aprendiz muestra dedicacion y responsabilidad en el cumplimiento de sus tareas. Se integra adecuadamente al equipo, participa activamente en las reuniones y demuestra iniciativa para proponer soluciones a los requerimientos asignados.",
+      "compromisos_mejora": "1. Documentar de forma mas detallada los procesos y soluciones implementadas para facilitar el conocimiento del equipo. 2. Profundizar en arquitecturas de microservicios y patrones de diseno avanzados para fortalecer las competencias tecnicas."
     },
     "momento_3": {
-      "fecha": "07/10/2026",
-      "observaciones_instructor": "Desempeño general sobresaliente. El aprendiz ha mostrado un alto nivel de autonomía, compromiso y calidad técnica en el desarrollo de software a lo largo del proceso.",
-      "observaciones_aprendiz": "Culmino mi etapa productiva muy satisfecho con los aprendizajes técnicos en AWS, Python y modelado de datos, y con la experiencia de trabajo en equipo en la empresa.",
-      "observaciones_coformador": "El aporte del aprendiz fue valioso en los procesos internos de automatización. Demostró profesionalismo, excelente actitud y capacidad técnica de primer nivel.",
-      "compromisos_mejora": "Se recomienda profundizar en la implementación de pruebas automatizadas para los sistemas desarrollados. Sería beneficioso mantener actualizada la documentación de los procesos de despliegue y configuración."
+      "fecha": "",
+      "observaciones_instructor": "",
+      "observaciones_aprendiz": "",
+      "observaciones_coformador": "",
+      "compromisos_mejora": ""
     }
   }
 }

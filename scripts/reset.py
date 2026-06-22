@@ -40,6 +40,27 @@ HISTORICO_PATH = CONTEXTO_DIR / "historico_actividades.md"
 MEMORY_PATH = CONTEXTO_DIR / "memory_descriptions.md"
 MENSAJE_PATH = CONTEXTO_DIR / "mensaje_instructor.md"
 
+# Estado de runtime
+ACTAS_STATE_PATH = CONTEXTO_DIR / "actas_enviadas.json"
+OUTPUT_DIR = BASE_DIR / "output"
+
+# Template del estado de actas (primer uso)
+ACTAS_STATE_TEMPLATE = """{
+  "momento_1": {
+    "enviada": false,
+    "fecha_envio": null
+  },
+  "momento_2": {
+    "enviada": false,
+    "fecha_envio": null
+  },
+  "momento_3": {
+    "enviada": false,
+    "fecha_envio": null
+  }
+}
+"""
+
 # CONFIGURAR: Reemplazar con el owner/repo real de GitHub
 GITHUB_REPO = "your-username/your-repo"
 GITHUB_BRANCH = "main"
@@ -150,9 +171,15 @@ Decopla la inferencia de la ejecucion fisica de los scripts de automatizacion.
 {
   "bitacoras": [],
   "actas": {
+    "momento_1": {
+      "resultados_aprendizaje": "",
+      "actividades_desarrollar": "",
+      "evidencias_aprendizaje": "",
+      "observaciones_adicionales": ""
+    },
     "momento_2": {
       "fecha": "",
-      "observaciones_instructor": "",
+      "observaciones_instructor": "(opcional - no implementado en script, se rellena manualmente por el instructor en Paragraph 14)",
       "observaciones_aprendiz": "",
       "observaciones_coformador": "",
       "compromisos_mejora": ""
@@ -225,6 +252,54 @@ def reset_context() -> bool:
 
 
 # ============================================================================
+# Reseteo de estado de runtime
+# ============================================================================
+
+def reset_state() -> bool:
+    """Regenera el archivo de estado de actas enviadas al estado inicial."""
+    print("[Estado de runtime]")
+    try:
+        ACTAS_STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        ACTAS_STATE_PATH.write_text(ACTAS_STATE_TEMPLATE, encoding="utf-8")
+        print(f"  [OK] {ACTAS_STATE_PATH.name} regenerado (todos los momentos en 'no enviada').")
+        return True
+    except OSError as e:
+        print(f"  [FAIL] No se pudo escribir {ACTAS_STATE_PATH.name}: {e}", file=sys.stderr)
+        return False
+
+
+def reset_output() -> bool:
+    """Elimina todos los archivos generados en la carpeta output/."""
+    print("[Archivos generados (output/)]")
+    if not OUTPUT_DIR.exists():
+        print(f"  [INFO] {OUTPUT_DIR.name}/ no existe, nada que limpiar.")
+        return True
+
+    success = True
+    archivos_eliminados = 0
+    carpetas_eliminadas = 0
+
+    try:
+        for item in OUTPUT_DIR.iterdir():
+            try:
+                if item.is_file():
+                    item.unlink()
+                    archivos_eliminados += 1
+                elif item.is_dir():
+                    shutil.rmtree(item)
+                    carpetas_eliminadas += 1
+            except OSError as e:
+                print(f"  [WARN] No se pudo eliminar {item.name}: {e}", file=sys.stderr)
+                success = False
+
+        print(f"  [OK] {archivos_eliminados} archivos y {carpetas_eliminadas} carpetas eliminados de output/.")
+        return success
+    except OSError as e:
+        print(f"  [FAIL] Error al acceder a output/: {e}", file=sys.stderr)
+        return False
+
+
+# ============================================================================
 # Regeneracion de .env
 # ============================================================================
 
@@ -269,6 +344,8 @@ def main():
     parser = argparse.ArgumentParser(description="Regenera archivos del proyecto desde cero.")
     parser.add_argument("--templates", action="store_true", help="Regenera plantillas.")
     parser.add_argument("--context", action="store_true", help="Regenera archivos de contexto.")
+    parser.add_argument("--state", action="store_true", help="Regenera el estado de runtime (actas_enviadas.json).")
+    parser.add_argument("--output", action="store_true", help="Limpia la carpeta output/ con archivos generados.")
     parser.add_argument("--env", action="store_true", help="Regenera .env.")
     parser.add_argument("--all", action="store_true", help="Regenera todo (excepto .env).")
     parser.add_argument("--include-env", action="store_true", help="Incluir .env en --all.")
@@ -277,11 +354,13 @@ def main():
     args = parser.parse_args()
 
     # Si no se pasa ningun flag, usar --all
-    if not any([args.templates, args.context, args.env, args.all]):
+    if not any([args.templates, args.context, args.env, args.state, args.output, args.all]):
         args.all = True
 
     do_templates = args.templates or args.all
     do_context = args.context or args.all
+    do_state = args.state or args.all
+    do_output = args.output or args.all
     do_env = args.env or (args.all and args.include_env)
 
     # Confirmacion
@@ -292,12 +371,16 @@ def main():
             actions.append("- Plantillas (bitacoras.xlsx, actas.docx)")
         if do_context:
             actions.append("- Archivos de contexto (historico, memory, mensaje)")
+        if do_state:
+            actions.append("- Estado de runtime (actas_enviadas.json)")
+        if do_output:
+            actions.append("- Archivos generados (output/)")
         if do_env:
             actions.append("- .env (se hara backup primero)")
         if not actions:
-            print("No hay acciones para ejecutar. Use --templates, --context, --env, o --all.")
+            print("No hay acciones para ejecutar. Use --templates, --context, --state, --output, --env, o --all.")
             return 0
-        print("Se regeneraran los siguientes archivos:")
+        print("Se regeneraran/limpiaran los siguientes archivos:")
         for a in actions:
             print(f"  {a}")
         if not confirm("\n¿Continuar?", args.yes):
@@ -310,18 +393,57 @@ def main():
         results["templates"] = "ok" if reset_templates() else "fail"
     if do_context:
         results["context"] = "ok" if reset_context() else "fail"
+    if do_state:
+        results["state"] = "ok" if reset_state() else "fail"
+    if do_output:
+        results["output"] = "ok" if reset_output() else "fail"
     if do_env:
         results["env"] = "ok" if reset_env() else "fail"
+
+    # Mensaje post-reset con instrucciones para primer uso
+    all_ok = all(v == "ok" for v in results.values())
+    if all_ok and not args.ai_mode:
+        print()
+        print("=" * 70)
+        print("[OK] Reset completado. El sistema esta listo para un primer uso.")
+        print("=" * 70)
+        print()
+        print("Siguientes pasos para un nuevo usuario:")
+        print("  1. Configurar el entorno:")
+        print("     uv run python scripts/setup.py")
+        print()
+        print("  2. Llenar el historico de actividades:")
+        print("     Editar contexto/historico_actividades.md con las actividades realizadas")
+        print()
+        print("  3. Inferir el JSON enriquecido:")
+        print("     Pedirle a un agente de IA que lea instrucciones/AGENTS.md y complete")
+        print("     contexto/memory_descriptions.md (seccion bitacoras y actas).")
+        print()
+        print("  4. Ejecutar el script principal:")
+        print("     uv run python scripts/diligenciar.py --ai-mode")
+        print()
+        print("  5. Verificar con el doctor:")
+        print("     uv run python scripts/doctor.py")
+        print("=" * 70)
 
     if args.ai_mode:
         # Modo agente: JSON
         all_ok = all(v == "ok" for v in results.values())
-        print(json.dumps({
+        output = {
             "status": "ok" if all_ok else "partial" if any(v == "ok" for v in results.values()) else "fail",
             "actions": results,
-        }, ensure_ascii=False, indent=2))
+        }
+        if all_ok:
+            output["next_steps"] = [
+                "Run: uv run python scripts/setup.py",
+                "Edit: contexto/historico_actividades.md",
+                "Ask AI agent to update contexto/memory_descriptions.md per instrucciones/AGENTS.md",
+                "Run: uv run python scripts/diligenciar.py --ai-mode",
+                "Verify: uv run python scripts/doctor.py"
+            ]
+        print(json.dumps(output, ensure_ascii=False, indent=2))
 
-    return 0 if all(v == "ok" for v in results.values()) else 1
+    return 0 if all_ok else 1
 
 
 if __name__ == "__main__":

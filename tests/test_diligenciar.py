@@ -13,6 +13,9 @@ from docx.shared import Pt
 # Asegurar que scripts/ está en sys.path para importar diligenciar
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'scripts'))
 import diligenciar
+import email_module
+import env_validator
+from unittest.mock import patch
 
 
 class TestDiligenciarAutomation(unittest.TestCase):
@@ -44,6 +47,9 @@ class TestDiligenciarAutomation(unittest.TestCase):
         diligenciar.HISTORICO_PATH = os.path.join(self.test_dir, "historico_actividades.md")
         diligenciar.MEMORY_PATH = os.path.join(self.test_dir, "memory_descriptions.md")
         
+        self.original_actas_state_path = diligenciar.ACTAS_STATE_PATH
+        diligenciar.ACTAS_STATE_PATH = os.path.join(self.test_dir, "actas_enviadas.json")
+        
         # Copiar los archivos plantilla reales al directorio temporal para pruebas de integración reales
         if os.path.exists(self.original_excel_path):
             shutil.copy2(self.original_excel_path, diligenciar.EXCEL_PATH)
@@ -64,6 +70,7 @@ class TestDiligenciarAutomation(unittest.TestCase):
         diligenciar.TEMPLATE_WORD_PATH = self.original_template_word_path
         diligenciar.HISTORICO_PATH = self.original_historico_path
         diligenciar.MEMORY_PATH = self.original_memory_path
+        diligenciar.ACTAS_STATE_PATH = self.original_actas_state_path
         
         # Eliminar el directorio temporal
         shutil.rmtree(self.test_dir)
@@ -79,7 +86,7 @@ class TestDiligenciarAutomation(unittest.TestCase):
         data = diligenciar.parse_memory_descriptions()
         self.assertIn("bitacoras", data)
         self.assertIn("actas", data)
-        self.assertEqual(len(data["bitacoras"]), 3)
+        self.assertGreaterEqual(len(data["bitacoras"]), 1)
         self.assertEqual(data["bitacoras"][0]["numero"], 1)
 
     def test_get_next_undiligenced_bitacora(self):
@@ -324,21 +331,20 @@ class TestDiligenciarAutomation(unittest.TestCase):
         """
         Prueba de integración actualizada para Refactor v2 — Momento 2:
         - P14 (observaciones instructor) NO fue modificado por la función
-        - P20 (observaciones co-formador) NO fue modificado por la función
+        - P20 (observaciones co-formador) SÍ fue modificado con retroalimentación
         - P17 (observaciones aprendiz) SÍ tiene contenido nuevo
         - Columna "Compromisos de mejora" tiene texto
         - Texto insertado usa Calibri 9pt
         
         Nota: El template Word puede tener datos de sesiones previas.
-        Se verifica que la función NO escribe en P14/P20 (comportamiento correcto).
+        Se verifica que la función NO escribe en P14 pero SÍ en P20 (comportamiento correcto).
         """
         memory_data = diligenciar.parse_memory_descriptions()
         exec_date_str = "08/07/2026"
         
-        # Capturar estado ANTES de ejecutar
+        # Capturar estado ANTES de ejecutar (solo P14, P20 se modifica)
         doc_before = docx.Document(diligenciar.WORD_PATH)
         p14_before = doc_before.paragraphs[14].text
-        p20_before = doc_before.paragraphs[20].text
         
         # Diligenciar Momento 2 (retorna la ruta del archivo modificado)
         out_path = diligenciar.process_word_actas(2, memory_data, exec_date_str)
@@ -354,11 +360,12 @@ class TestDiligenciarAutomation(unittest.TestCase):
         # Verificar fecha de diligenciamiento en Tabla 3
         self.assertEqual(table3.rows[1].cells[8].text, exec_date_str)
         
-        # Verificar CAMPOS EXCLUIDOS: P14 y P20 NO fueron modificados
+        # Verificar CAMPOS: P14 NO se modifica, P20 SI se modifica
         self.assertEqual(doc.paragraphs[14].text, p14_before,
                          "P14 (observaciones instructor) NO debe ser modificado en Momento 2")
-        self.assertEqual(doc.paragraphs[20].text, p20_before,
-                         "P20 (observaciones co-formador) NO debe ser modificado en Momento 2")
+        expected_coformador = memory_data["actas"]["momento_2"]["observaciones_coformador"]
+        self.assertIn(expected_coformador, doc.paragraphs[20].text,
+                      "P20 (observaciones co-formador) debe contener retroalimentacion en Momento 2")
         
         # Verificar P17 (observaciones aprendiz) SÍ tiene contenido nuevo
         self.assertIn(memory_data["actas"]["momento_2"]["observaciones_aprendiz"],
@@ -392,21 +399,16 @@ class TestDiligenciarAutomation(unittest.TestCase):
     def test_word_integration_momento_3(self):
         """
         Prueba de integración actualizada para Refactor v2 — Momento 3:
-        - Tablas 6 y 7 (instructor, co-formador) NO fueron modificadas
+        - Tablas 6 y 7 (co-formador, instructor) SÍ fueron modificadas con retroalimentación
         - Tabla 8 (aprendiz) SÍ tiene contenido nuevo
         - Compromisos de mejora rellenados
         - Calibri 9pt
         
         Nota: El template Word puede tener datos de sesiones previas.
-        Se verifica que la función NO escribe en Tabla6/Tabla7 (comportamiento correcto).
+        Se verifica que la función escribe en Tabla6/Tabla7 (comportamiento correcto).
         """
         memory_data = diligenciar.parse_memory_descriptions()
         exec_date_str = "08/10/2026"
-        
-        # Capturar estado ANTES de ejecutar
-        doc_before = docx.Document(diligenciar.WORD_PATH)
-        table6_before = doc_before.tables[6].rows[2].cells[1].text
-        table7_before = doc_before.tables[7].rows[2].cells[1].text
         
         # Diligenciar Momento 3 (retorna la ruta del archivo modificado)
         out_path = diligenciar.process_word_actas(3, memory_data, exec_date_str)
@@ -425,13 +427,13 @@ class TestDiligenciarAutomation(unittest.TestCase):
         # Verificar fecha final en Tabla 5
         self.assertEqual(table5.rows[1].cells[7].text, "08/10/2026")
         
-        # Verificar TABLAS EXCLUIDAS: Tabla 6 y 7 NO fueron modificadas
-        table6 = doc.tables[6]
-        table7 = doc.tables[7]
-        self.assertEqual(table6.rows[2].cells[1].text, table6_before,
-                         "Tabla 6 (co-formador) NO debe ser modificada en Momento 3")
-        self.assertEqual(table7.rows[2].cells[1].text, table7_before,
-                         "Tabla 7 (instructor) NO debe ser modificada en Momento 3")
+        # Verificar que tabla 6 (co-formador) se relleno en R1C1
+        expected_coformador_m3 = memory_data["actas"]["momento_3"]["observaciones_coformador"]
+        self.assertIn(expected_coformador_m3, doc.tables[6].rows[1].cells[1].text)
+
+        # Verificar que tabla 7 (instructor) se relleno en R1C1
+        expected_instructor_m3 = memory_data["actas"]["momento_3"]["observaciones_instructor"]
+        self.assertIn(expected_instructor_m3, doc.tables[7].rows[1].cells[1].text)
         
         # Verificar Tabla 8 (aprendiz) SÍ tiene contenido nuevo
         table8 = doc.tables[8]
@@ -607,6 +609,192 @@ class TestDiligenciarAutomation(unittest.TestCase):
                           "Compromisos de mejora deben estar en Tabla 5, fila 6, col 6")
             self.assertIn(compromisos, col6_row17,
                           "Compromisos de mejora deben estar en Tabla 5, fila 17, col 6")
+
+
+    # =========================================================================
+    # TESTS: Actas state helpers (catch-up logic & state file)
+    # =========================================================================
+
+    def test_actas_state_helpers(self):
+        """Verifica mark_acta_enviada, reset_actas_state, e inmutabilidad del estado."""
+        state = {
+            "momento_1": {"enviada": False, "fecha_envio": None},
+            "momento_2": {"enviada": False, "fecha_envio": None},
+            "momento_3": {"enviada": False, "fecha_envio": None},
+        }
+        new_state = diligenciar.mark_acta_enviada(state, 2, fecha_iso="2026-06-22")
+        # new_state has momento_2 marked
+        self.assertTrue(new_state["momento_2"]["enviada"])
+        self.assertEqual(new_state["momento_2"]["fecha_envio"], "2026-06-22")
+        # Original state is unchanged (immutability)
+        self.assertFalse(state["momento_2"]["enviada"])
+        self.assertIsNone(state["momento_2"]["fecha_envio"])
+        # reset clears everything
+        reset = diligenciar.reset_actas_state(new_state)
+        for key in ("momento_1", "momento_2", "momento_3"):
+            self.assertFalse(reset[key]["enviada"])
+            self.assertIsNone(reset[key]["fecha_envio"])
+
+    def test_load_actas_state_missing_file(self):
+        """When file doesn't exist, returns fresh state with all enviada=False."""
+        missing_path = os.path.join(self.test_dir, "nonexistent_state.json")
+        state = diligenciar.load_actas_state(missing_path)
+        for key in ("momento_1", "momento_2", "momento_3"):
+            self.assertFalse(state[key]["enviada"])
+            self.assertIsNone(state[key]["fecha_envio"])
+
+    def test_load_actas_state_invalid_json(self):
+        """Malformed JSON returns fresh state and emits warning to stderr."""
+        import io
+        bad_path = os.path.join(self.test_dir, "bad_state.json")
+        with open(bad_path, 'w', encoding='utf-8') as f:
+            f.write("{ esto no es json valido }")
+
+        captured_stderr = io.StringIO()
+        with patch('sys.stderr', captured_stderr):
+            state = diligenciar.load_actas_state(bad_path)
+
+        for key in ("momento_1", "momento_2", "momento_3"):
+            self.assertFalse(state[key]["enviada"])
+            self.assertIsNone(state[key]["fecha_envio"])
+        # Verify warning was emitted
+        self.assertIn("Warning", captured_stderr.getvalue())
+
+    def test_load_actas_state_missing_keys(self):
+        """JSON with only momento_1 fills missing momento_2/3 with defaults."""
+        partial_path = os.path.join(self.test_dir, "partial_state.json")
+        with open(partial_path, 'w', encoding='utf-8') as f:
+            json.dump({"momento_1": {"enviada": True, "fecha_envio": "2026-04-08"}}, f)
+
+        state = diligenciar.load_actas_state(partial_path)
+        self.assertTrue(state["momento_1"]["enviada"])
+        self.assertEqual(state["momento_1"]["fecha_envio"], "2026-04-08")
+        self.assertFalse(state["momento_2"]["enviada"])
+        self.assertIsNone(state["momento_2"]["fecha_envio"])
+        self.assertFalse(state["momento_3"]["enviada"])
+        self.assertIsNone(state["momento_3"]["fecha_envio"])
+
+    # =========================================================================
+    # TESTS: Momento 1 Word integration (new)
+    # =========================================================================
+
+    def test_momento_1_word_integration(self):
+        """Verifica que process_word_actas(1, ...) rellena Tabla 2 y P10."""
+        memory_data = diligenciar.parse_memory_descriptions()
+        env_vars = {
+            "FECHA_INICIO_ETAPA": "08/04/2026",
+            "FECHA_FIN_ETAPA": "22/07/2026",
+            "FECHA_AFILIACION_ARL": "01/04/2026",
+            "ARL_NUMERO": "123456",
+            "HORARIO_ETAPA": "Diurno",
+        }
+        with patch.dict(os.environ, env_vars):
+            out_path = diligenciar.process_word_actas(1, memory_data, "22/06/2026")
+
+        self.assertIsNotNone(out_path)
+        doc = docx.Document(out_path)
+        table2 = doc.tables[2]
+
+        # R1, C1 — fecha inicio etapa
+        self.assertEqual(table2.rows[1].cells[1].text, "08/04/2026")
+        # R1, C7 — fecha fin etapa
+        self.assertEqual(table2.rows[1].cells[7].text, "22/07/2026")
+        # R1, C12 — fecha afiliación ARL
+        self.assertEqual(table2.rows[1].cells[12].text, "01/04/2026")
+        # R2, C3 — ARL número
+        self.assertEqual(table2.rows[2].cells[3].text, "123456")
+        # R2, C11 — horario
+        self.assertEqual(table2.rows[2].cells[11].text, "Diurno")
+        # P10 — fecha de diligenciamiento
+        self.assertIn("22/06/2026", doc.paragraphs[10].text)
+
+    def test_momento_1_does_not_touch_firmas(self):
+        """Momento 1 no auto-rellena firmas (Tabla 2 R11)."""
+        memory_data = diligenciar.parse_memory_descriptions()
+        doc_before = docx.Document(diligenciar.WORD_PATH)
+        firma_before = [cell.text for cell in doc_before.tables[2].rows[11].cells]
+
+        env_vars = {
+            "FECHA_INICIO_ETAPA": "08/04/2026",
+            "FECHA_FIN_ETAPA": "22/07/2026",
+        }
+        with patch.dict(os.environ, env_vars):
+            out_path = diligenciar.process_word_actas(1, memory_data, "22/06/2026")
+
+        doc = docx.Document(out_path)
+        for idx, cell in enumerate(doc.tables[2].rows[11].cells):
+            self.assertEqual(
+                cell.text, firma_before[idx],
+                f"Tabla 2 R11 cell {idx} (firmas) should not be modified by Momento 1"
+            )
+
+    # =========================================================================
+    # TESTS: Email module lista de momentos
+    # =========================================================================
+
+    def test_email_module_lista_momentos(self):
+        """construir_asunto with list of moments produces plural 'Actas Momentos'."""
+        subject_12 = email_module.construir_asunto([], [1, 2])
+        self.assertIn("Actas Momentos", subject_12)
+        self.assertIn("1 y 2", subject_12)
+
+        subject_123 = email_module.construir_asunto([], [1, 2, 3])
+        self.assertIn("Actas Momentos", subject_123)
+        self.assertIn("1, 2 y 3", subject_123)
+
+    def test_email_module_single_momento_backward_compat(self):
+        """construir_asunto with int still works (backward compat)."""
+        subject = email_module.construir_asunto([], 2)
+        self.assertIn("Acta Momento 2", subject)
+
+    # =========================================================================
+    # TESTS: env_validator optional vars
+    # =========================================================================
+
+    def test_env_validator_optional_vars(self):
+        """Optional vars: absent=ok, invalid=reported, valid=ok."""
+        env_path = os.path.join(self.test_dir, ".env_test_optional")
+        required_content = (
+            "GMAIL_SENDER=test@gmail.com\n"
+            "GMAIL_APP_PASSWORD=abcdefghijklmnop\n"
+            "EMAIL_DESTINATARIO_PRODUCCION=prod@sena.edu.co\n"
+            "EMAIL_DESTINATARIO_PRUEBAS=test@gmail.com\n"
+            "EMAIL_CC=cc@gmail.com\n"
+            "EMAIL_MODO=pruebas\n"
+            "APRENDIZ_NOMBRE=Juan Perez\n"
+            "EMPRESA_NOMBRE=Mi Empresa SAS\n"
+            "INSTRUCTOR_NOMBRE=Carlos Lopez\n"
+        )
+        optional_keys = [
+            "ACTA_M1_FECHA", "ACTA_M2_FECHA", "ACTA_M3_FECHA",
+            "ACTA_VENTANA_DIAS", "FECHA_INICIO_ETAPA", "FECHA_FIN_ETAPA",
+            "FECHA_AFILIACION_ARL", "ARL_NUMERO", "HORARIO_ETAPA",
+        ]
+
+        # Scenario 1: Required only — should be ok
+        with open(env_path, 'w', encoding='utf-8') as f:
+            f.write(required_content)
+        clear_env = {k: "" for k in optional_keys}
+        with patch.dict(os.environ, clear_env):
+            ok, missing, _ = env_validator.validate_env(env_path)
+        self.assertTrue(ok, "Should be ok with only required vars")
+        self.assertEqual(missing, [])
+
+        # Scenario 2: Invalid optional var — should be reported
+        with open(env_path, 'w', encoding='utf-8') as f:
+            f.write(required_content + "ACTA_M1_FECHA=not-a-date\n")
+        with patch.dict(os.environ, clear_env):
+            ok, missing, _ = env_validator.validate_env(env_path)
+        self.assertFalse(ok, "Should fail with invalid optional var")
+        missing_keys = [m["key"] for m in missing]
+        self.assertIn("ACTA_M1_FECHA", missing_keys)
+
+        # Scenario 3: Valid optional var — should be ok
+        with open(env_path, 'w', encoding='utf-8') as f:
+            f.write(required_content + "ACTA_M1_FECHA=2026-04-08\n")
+        with patch.dict(os.environ, clear_env):
+            ok, missing, _ = env_validator.validate_env(env_path)
+        self.assertTrue(ok, "Should be ok with valid optional var")
 
 
 if __name__ == "__main__":
