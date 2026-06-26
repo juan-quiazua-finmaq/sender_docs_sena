@@ -371,11 +371,16 @@ class TestDiligenciarAutomation(unittest.TestCase):
         self.assertIn(memory_data["actas"]["momento_2"]["observaciones_aprendiz"],
                       doc.paragraphs[17].text)
         
-        # Verificar compromisos de mejora en Tabla 3
-        compromisos = memory_data["actas"]["momento_2"].get("compromisos_mejora", "")
-        if compromisos:
-            self.assertIn(compromisos, table3.rows[6].cells[6].text)
-            self.assertIn(compromisos, table3.rows[17].cells[6].text)
+        # Verificar observaciones por variable en Tabla 3 (fill_valoraciones_table)
+        # Con valoraciones presentes, se escriben las observaciones individuales
+        valoraciones = memory_data["actas"]["momento_2"].get("valoraciones", [])
+        if valoraciones:
+            obs_0 = valoraciones[0].get("observacion", "")
+            self.assertIn(obs_0, table3.rows[6].cells[6].text,
+                          "Tabla 3 rows[6].cells[6] debe contener la primera observacion por variable")
+            obs_4 = valoraciones[4].get("observacion", "")
+            self.assertIn(obs_4, table3.rows[17].cells[6].text,
+                          "Tabla 3 rows[17].cells[6] debe contener la quinta observacion por variable")
         
         # Verificar Calibri 9pt en P17 (observaciones aprendiz)
         for run in doc.paragraphs[17].runs:
@@ -566,9 +571,9 @@ class TestDiligenciarAutomation(unittest.TestCase):
 
     def test_word_compromisos_mejora_momento_2(self):
         """
-        Verifica específicamente que los compromisos de mejora se insertan
-        correctamente en la columna 'Observaciones / Compromisos de mejora'
-        de la Tabla 3 para Momento 2.
+        Verifica que fill_valoraciones_table escribe correctamente en la columna
+        'Observaciones / Compromisos de mejora' de la Tabla 3 para Momento 2.
+        Con valoraciones presentes, se escriben observaciones individuales (no compromisos_mejora).
         """
         memory_data = diligenciar.parse_memory_descriptions()
         exec_date_str = "08/07/2026"
@@ -578,14 +583,25 @@ class TestDiligenciarAutomation(unittest.TestCase):
         doc = docx.Document(out_path)
         table3 = doc.tables[3]
         
-        compromisos = memory_data["actas"]["momento_2"].get("compromisos_mejora", "")
-        if compromisos:
+        valoraciones = memory_data["actas"]["momento_2"].get("valoraciones", [])
+        if valoraciones:
+            # Con valoraciones, rows[6] tiene la primera observacion y rows[17] tiene la quinta
+            obs_0 = valoraciones[0].get("observacion", "")
             col6_row6 = table3.rows[6].cells[6].text
+            self.assertIn(obs_0, col6_row6,
+                          "Tabla 3, fila 6, col 6 debe contener la primera observacion por variable")
+            obs_4 = valoraciones[4].get("observacion", "")
             col6_row17 = table3.rows[17].cells[6].text
-            self.assertIn(compromisos, col6_row6,
-                          "Compromisos de mejora deben estar en Tabla 3, fila 6, col 6")
-            self.assertIn(compromisos, col6_row17,
-                          "Compromisos de mejora deben estar en Tabla 3, fila 17, col 6")
+            self.assertIn(obs_4, col6_row17,
+                          "Tabla 3, fila 17, col 6 debe contener la quinta observacion por variable")
+        else:
+            # Sin valoraciones, debe usar compromisos_mejora como fallback
+            compromisos = memory_data["actas"]["momento_2"].get("compromisos_mejora", "")
+            if compromisos:
+                self.assertIn(compromisos, table3.rows[6].cells[6].text,
+                              "Compromisos de mejora deben estar en Tabla 3, fila 6, col 6")
+                self.assertIn(compromisos, table3.rows[17].cells[6].text,
+                              "Compromisos de mejora deben estar en Tabla 3, fila 17, col 6")
 
     def test_word_compromisos_mejora_momento_3(self):
         """
@@ -795,6 +811,336 @@ class TestDiligenciarAutomation(unittest.TestCase):
         with patch.dict(os.environ, clear_env):
             ok, missing, _ = env_validator.validate_env(env_path)
         self.assertTrue(ok, "Should be ok with valid optional var")
+
+    # =========================================================================
+    # TESTS DE INTEGRACIÓN: Observaciones por variable (valoraciones)
+    # =========================================================================
+
+    def test_process_word_momento_2_fills_valoraciones_cells(self):
+        """Verifica que M2 escribe las 9 observaciones por variable en Tabla 3 col 6."""
+        memory_data = diligenciar.parse_memory_descriptions()
+        out_path = diligenciar.process_word_actas(2, memory_data, "22/06/2026")
+
+        doc = docx.Document(out_path)
+        table3 = doc.tables[3]
+
+        # Verificar observaciones especificas de las primeras dos valoraciones
+        valoraciones = memory_data["actas"]["momento_2"]["valoraciones"]
+        self.assertEqual(len(valoraciones), 9, "M2 debe tener 9 valoraciones en el JSON")
+        obs_gestion = valoraciones[0]["observacion"]
+        obs_creatividad = valoraciones[1]["observacion"]
+        self.assertIn(obs_gestion, table3.rows[6].cells[6].text,
+                      "Fila 6 col 6 debe contener observacion de 'Gestion de conocimiento'")
+        self.assertIn(obs_creatividad, table3.rows[7].cells[6].text,
+                      "Fila 7 col 6 debe contener observacion de 'Creatividad y calidad'")
+
+        # Verificar que las 9 celdas (filas 6-9 y 17-21) tienen texto no vacio
+        filas_esperadas = [6, 7, 8, 9, 17, 18, 19, 20, 21]
+        for fila in filas_esperadas:
+            texto = table3.rows[fila].cells[6].text.strip()
+            self.assertTrue(len(texto) > 0,
+                            f"Tabla 3 rows[{fila}].cells[6] debe tener texto no vacio, obtuvo: '{texto}'")
+
+        # Verificar que NO se incluye "X" en la celda [6] (eso es de la columna 2)
+        for fila in filas_esperadas:
+            self.assertNotEqual(table3.rows[fila].cells[6].text.strip(), "X",
+                                f"Tabla 3 rows[{fila}].cells[6] NO debe ser 'X' (eso pertenece a la columna de marcas)")
+
+    def test_process_word_momento_3_fills_with_fallback(self):
+        """Verifica que M3 con valoraciones=[] escribe fallback en rows[6] y rows[17]."""
+        memory_data = diligenciar.parse_memory_descriptions()
+        out_path = diligenciar.process_word_actas(3, memory_data, "07/10/2026")
+
+        doc = docx.Document(out_path)
+        table5 = doc.tables[5]
+
+        # valoraciones en M3 esta vacio, debe usar compromisos_mejora como fallback
+        # (que tambien esta vacio en M3, asi que las celdas deben quedar vacias)
+        fallback = memory_data["actas"]["momento_3"].get("compromisos_mejora", "")
+
+        # Rows 6 y 17 deben tener el fallback (vacio en este caso)
+        col6_row6 = table5.rows[6].cells[6].text.strip()
+        col6_row17 = table5.rows[17].cells[6].text.strip()
+        self.assertEqual(col6_row6, fallback,
+                         "Tabla 5 rows[6].cells[6] debe tener el fallback de M3")
+        self.assertEqual(col6_row17, fallback,
+                         "Tabla 5 rows[17].cells[6] debe tener el fallback de M3")
+
+        # Las demas celdas (7,8,9,18,19,20,21) deben quedar vacias
+        for fila in [7, 8, 9, 18, 19, 20, 21]:
+            texto = table5.rows[fila].cells[6].text.strip()
+            self.assertEqual(texto, "",
+                             f"Tabla 5 rows[{fila}].cells[6] debe estar vacia cuando valoraciones=[]")
+
+    def test_process_word_momento_1_unchanged(self):
+        """Regresion: verifica que M1 sigue rellenando Tabla 2 R6-R9 con resultados_aprendizaje."""
+        memory_data = diligenciar.parse_memory_descriptions()
+        env_vars = {
+            "FECHA_INICIO_ETAPA": "08/04/2026",
+            "FECHA_FIN_ETAPA": "22/07/2026",
+        }
+        with patch.dict(os.environ, env_vars):
+            out_path = diligenciar.process_word_actas(1, memory_data, "22/06/2026")
+
+        self.assertIsNotNone(out_path)
+        doc = docx.Document(out_path)
+        table2 = doc.tables[2]
+
+        m1 = memory_data["actas"]["momento_1"]
+        self.assertIn(m1["resultados_aprendizaje"], table2.rows[6].cells[2].text,
+                      "M1 Tabla 2 R6 debe contener resultados_aprendizaje")
+        self.assertIn(m1["actividades_desarrollar"], table2.rows[7].cells[2].text,
+                      "M1 Tabla 2 R7 debe contener actividades_desarrollar")
+        self.assertIn(m1["evidencias_aprendizaje"], table2.rows[8].cells[2].text,
+                      "M1 Tabla 2 R8 debe contener evidencias_aprendizaje")
+        self.assertIn(m1["observaciones_adicionales"], table2.rows[9].cells[2].text,
+                      "M1 Tabla 2 R9 debe contener observaciones_adicionales")
+
+    # =========================================================================
+    # TESTS: Validación del esquema JSON de valoraciones
+    # =========================================================================
+
+    def test_memory_has_valoraciones_field(self):
+        """Verifica que actas.momento_2.valoraciones exista con 9 entradas validas."""
+        memory_data = diligenciar.parse_memory_descriptions()
+        self.assertIn("actas", memory_data, "JSON debe tener clave 'actas'")
+        self.assertIn("momento_2", memory_data["actas"], "actas debe tener 'momento_2'")
+        m2 = memory_data["actas"]["momento_2"]
+        self.assertIn("valoraciones", m2, "momento_2 debe tener 'valoraciones'")
+
+        valoraciones = m2["valoraciones"]
+        self.assertEqual(len(valoraciones), 9,
+                         f"valoraciones debe tener 9 entradas, tiene {len(valoraciones)}")
+
+        for i, val in enumerate(valoraciones):
+            self.assertIsInstance(val, dict,
+                                 f"valoraciones[{i}] debe ser un dict")
+            self.assertIn("variable", val, f"valoraciones[{i}] debe tener 'variable'")
+            self.assertTrue(val["variable"].strip(),
+                            f"valoraciones[{i}].variable no debe estar vacio")
+            self.assertIn("categoria", val, f"valoraciones[{i}] debe tener 'categoria'")
+            self.assertTrue(val["categoria"].strip(),
+                            f"valoraciones[{i}].categoria no debe estar vacio")
+            self.assertIn("observacion", val, f"valoraciones[{i}] debe tener 'observacion'")
+            self.assertTrue(val["observacion"].strip(),
+                            f"valoraciones[{i}].observacion no debe estar vacio")
+
+    def test_valoraciones_ordered_correctly(self):
+        """Verifica que el orden de las valoraciones en M2 sea el del spec."""
+        memory_data = diligenciar.parse_memory_descriptions()
+        valoraciones = memory_data["actas"]["momento_2"]["valoraciones"]
+
+        expected_order = [
+            "Gestion de conocimiento",
+            "Creatividad y calidad",
+            "Administracion de recursos",
+            "Seguridad y salud en el trabajo",
+            "Trabajo en equipo",
+            "Relaciones interpersonales",
+            "Solucion de problemas",
+            "Cumplimiento",
+            "Organizacion",
+        ]
+
+        self.assertEqual(len(valoraciones), len(expected_order),
+                         f"Se esperaban {len(expected_order)} valoraciones, se encontraron {len(valoraciones)}")
+
+        for i, expected_var in enumerate(expected_order):
+            actual_var = valoraciones[i].get("variable", "")
+            self.assertEqual(
+                actual_var, expected_var,
+                f"valoraciones[{i}] debe ser '{expected_var}', obtuvo '{actual_var}'"
+            )
+
+
+class TestFillValoracionesTable(unittest.TestCase):
+    """Tests unitarios para fill_valoraciones_table (observaciones por variable)."""
+
+    def _make_table(self, n_rows=22, n_cols=7):
+        """Crea un documento Word temporal con una tabla de n_rows x n_cols."""
+        doc = docx.Document()
+        table = doc.add_table(rows=n_rows, cols=n_cols)
+        return table
+
+    # a) test_fill_valoraciones_writes_all_nine_cells
+    def test_fill_valoraciones_writes_all_nine_cells(self):
+        """Con 9 valoraciones, las 9 celdas (rows 6,7,8,9,17,18,19,20,21 col 6) deben tener texto."""
+        table = self._make_table()
+        valoraciones = [
+            {"variable": "Gestion de conocimiento", "categoria": "tecnico",
+             "observacion": "Demostro apropiacion del conocimiento."},
+            {"variable": "Creatividad y calidad", "categoria": "tecnico",
+             "observacion": "Aplico buenas practicas de desarrollo."},
+            {"variable": "Administracion de recursos", "categoria": "tecnico",
+             "observacion": "Fortalecio la gestion de recursos."},
+            {"variable": "Seguridad y salud en el trabajo", "categoria": "tecnico",
+             "observacion": "Cumplio con los lineamientos de seguridad."},
+            {"variable": "Trabajo en equipo", "categoria": "actitudinal",
+             "observacion": "Demostro adecuada integracion."},
+            {"variable": "Relaciones interpersonales", "categoria": "actitudinal",
+             "observacion": "Participo activamente en las reuniones."},
+            {"variable": "Solucion de problemas", "categoria": "actitudinal",
+             "observacion": "Abordo los desafios con autonomia."},
+            {"variable": "Cumplimiento", "categoria": "actitudinal",
+             "observacion": "Demostro responsabilidad."},
+            {"variable": "Organizacion", "categoria": "actitudinal",
+             "observacion": "Evidencio capacidad de organizacion."},
+        ]
+        fallback = "Compromiso fallback"
+
+        diligenciar.fill_valoraciones_table(table, valoraciones, fallback)
+
+        filas_word = [6, 7, 8, 9, 17, 18, 19, 20, 21]
+        for idx, fila in enumerate(filas_word):
+            texto = table.rows[fila].cells[6].text
+            self.assertEqual(
+                texto, valoraciones[idx]["observacion"],
+                f"rows[{fila}].cells[6] debe contener la observacion de '{valoraciones[idx]['variable']}', "
+                f"obtuvo: '{texto}'"
+            )
+
+    # b) test_fill_valoraciones_uses_fallback_when_empty
+    def test_fill_valoraciones_uses_fallback_when_empty(self):
+        """Con valoraciones=[], fallback debe ir en rows[6] y rows[17] solamente."""
+        table = self._make_table()
+        fallback = "Compromiso fallback"
+
+        diligenciar.fill_valoraciones_table(table, [], fallback)
+
+        self.assertEqual(table.rows[6].cells[6].text, fallback,
+                         "rows[6].cells[6] debe tener fallback cuando valoraciones=[]")
+        self.assertEqual(table.rows[17].cells[6].text, fallback,
+                         "rows[17].cells[6] debe tener fallback cuando valoraciones=[]")
+        # Las demas celdas deben quedar vacias (default del docx)
+        for fila in [7, 8, 9, 18, 19, 20, 21]:
+            texto = table.rows[fila].cells[6].text.strip()
+            self.assertEqual(texto, "",
+                             f"rows[{fila}].cells[6] debe estar vacia, obtuvo: '{texto}'")
+
+    # c) test_fill_valoraciones_uses_fallback_when_none
+    def test_fill_valoraciones_uses_fallback_when_none(self):
+        """Con valoraciones=None, fallback debe ir en rows[6] y rows[17] solamente."""
+        table = self._make_table()
+        fallback = "Compromiso fallback"
+
+        diligenciar.fill_valoraciones_table(table, None, fallback)
+
+        self.assertEqual(table.rows[6].cells[6].text, fallback,
+                         "rows[6].cells[6] debe tener fallback cuando valoraciones=None")
+        self.assertEqual(table.rows[17].cells[6].text, fallback,
+                         "rows[17].cells[6] debe tener fallback cuando valoraciones=None")
+        for fila in [7, 8, 9, 18, 19, 20, 21]:
+            texto = table.rows[fila].cells[6].text.strip()
+            self.assertEqual(texto, "",
+                             f"rows[{fila}].cells[6] debe estar vacia, obtuvo: '{texto}'")
+
+    # d) test_fill_valoraciones_uses_fallback_for_empty_observation
+    def test_fill_valoraciones_uses_fallback_for_empty_observation(self):
+        """Si la observacion esta vacia/None, debe usar fallback para esa celda."""
+        table = self._make_table()
+        fallback = "Compromiso fallback"
+        valoraciones = [
+            {"variable": "Gestion de conocimiento", "categoria": "tecnico",
+             "observacion": ""},  # vacia -> fallback
+            {"variable": "Creatividad y calidad", "categoria": "tecnico",
+             "observacion": "Aplico buenas practicas."},
+            {"variable": "Administracion de recursos", "categoria": "tecnico",
+             "observacion": None},  # None -> fallback
+            {"variable": "Seguridad y salud en el trabajo", "categoria": "tecnico",
+             "observacion": "Cumplio con lineamientos."},
+            {"variable": "Trabajo en equipo", "categoria": "actitudinal",
+             "observacion": "Buena integracion."},
+            {"variable": "Relaciones interpersonales", "categoria": "actitudinal",
+             "observacion": "Comunicacion asertiva."},
+            {"variable": "Solucion de problemas", "categoria": "actitudinal",
+             "observacion": "Autonomia analitica."},
+            {"variable": "Cumplimiento", "categoria": "actitudinal",
+             "observacion": "Responsabilidad demostrada."},
+            {"variable": "Organizacion", "categoria": "actitudinal",
+             "observacion": "Buena organizacion."},
+        ]
+
+        diligenciar.fill_valoraciones_table(table, valoraciones, fallback)
+
+        # rows[6] (idx 0) debe tener fallback (observacion vacia)
+        self.assertEqual(table.rows[6].cells[6].text, fallback,
+                         "rows[6] debe usar fallback cuando observacion=''")
+        # rows[8] (idx 2) debe tener fallback (observacion None)
+        self.assertEqual(table.rows[8].cells[6].text, fallback,
+                         "rows[8] debe usar fallback cuando observacion=None")
+        # rows[7] (idx 1) debe tener su observacion original
+        self.assertEqual(table.rows[7].cells[6].text, "Aplico buenas practicas.",
+                         "rows[7] debe conservar su observacion original")
+
+    # e) test_fill_valoraciones_handles_dict_without_observacion_key
+    def test_fill_valoraciones_handles_dict_without_observacion_key(self):
+        """Un dict sin clave 'observacion' no debe explotar; debe usar fallback."""
+        table = self._make_table()
+        fallback = "Compromiso fallback"
+        valoraciones = [
+            {"variable": "Gestion de conocimiento", "categoria": "tecnico"},  # sin 'observacion'
+            {"variable": "Creatividad y calidad", "categoria": "tecnico",
+             "observacion": "Aplico buenas practicas."},
+            {"variable": "Administracion de recursos", "categoria": "tecnico",
+             "observacion": "Fortalecio gestion."},
+            {"variable": "Seguridad y salud en el trabajo", "categoria": "tecnico",
+             "observacion": "Cumplio lineamientos."},
+            {"variable": "Trabajo en equipo", "categoria": "actitudinal",
+             "observacion": "Buena integracion."},
+            {"variable": "Relaciones interpersonales", "categoria": "actitudinal",
+             "observacion": "Comunicacion asertiva."},
+            {"variable": "Solucion de problemas", "categoria": "actitudinal",
+             "observacion": "Autonomia analitica."},
+            {"variable": "Cumplimiento", "categoria": "actitudinal",
+             "observacion": "Responsabilidad."},
+            {"variable": "Organizacion", "categoria": "actitudinal",
+             "observacion": "Buena organizacion."},
+        ]
+
+        # No debe lanzar excepcion
+        try:
+            diligenciar.fill_valoraciones_table(table, valoraciones, fallback)
+        except Exception as e:
+            self.fail(f"fill_valoraciones_table no debe explotar con dict sin 'observacion': {e}")
+
+        # rows[6] (idx 0) debe usar fallback
+        self.assertEqual(table.rows[6].cells[6].text, fallback,
+                         "rows[6] debe usar fallback cuando dict no tiene clave 'observacion'")
+        # rows[7] (idx 1) debe tener su observacion
+        self.assertEqual(table.rows[7].cells[6].text, "Aplico buenas practicas.",
+                         "rows[7] debe conservar su observacion original")
+
+    # f) test_fill_valoraciones_keeps_calibri_style
+    def test_fill_valoraciones_keeps_calibri_style(self):
+        """Verifica que apply_calibri_9 se aplica a las celdas modificadas."""
+        table = self._make_table()
+        valoraciones = [
+            {"variable": "v1", "categoria": "tecnico", "observacion": "obs1"},
+            {"variable": "v2", "categoria": "tecnico", "observacion": "obs2"},
+            {"variable": "v3", "categoria": "tecnico", "observacion": "obs3"},
+            {"variable": "v4", "categoria": "tecnico", "observacion": "obs4"},
+            {"variable": "v5", "categoria": "actitudinal", "observacion": "obs5"},
+            {"variable": "v6", "categoria": "actitudinal", "observacion": "obs6"},
+            {"variable": "v7", "categoria": "actitudinal", "observacion": "obs7"},
+            {"variable": "v8", "categoria": "actitudinal", "observacion": "obs8"},
+            {"variable": "v9", "categoria": "actitudinal", "observacion": "obs9"},
+        ]
+
+        diligenciar.fill_valoraciones_table(table, valoraciones, "fallback")
+
+        filas_word = [6, 7, 8, 9, 17, 18, 19, 20, 21]
+        for fila in filas_word:
+            cell = table.rows[fila].cells[6]
+            for paragraph in cell.paragraphs:
+                for run in paragraph.runs:
+                    self.assertEqual(
+                        run.font.name, 'Calibri',
+                        f"rows[{fila}].cells[6] debe usar fuente Calibri"
+                    )
+                    self.assertEqual(
+                        run.font.size, Pt(9),
+                        f"rows[{fila}].cells[6] debe usar tamano 9pt"
+                    )
 
 
 if __name__ == "__main__":

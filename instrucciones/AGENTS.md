@@ -98,14 +98,28 @@ uv run python scripts/setup.py --ai-mode
       "observaciones_instructor": "(opcional - no implementado en script, se rellena manualmente por el instructor en Paragraph 14)",
       "observaciones_aprendiz": "<string - primera persona, reflexivo, menciona logros>",
       "observaciones_coformador": "<string - tercera persona, evalua actitud, positivo>",
-      "compromisos_mejora": "<string - 1-2 compromisos positivos y accionables>"
+      "compromisos_mejora": "<string - DEPRECADO: ver seccion 2c. Se mantiene como fallback si valoraciones[] no esta presente>",
+      "valoraciones": [
+        {
+          "variable": "Gestion de conocimiento",
+          "categoria": "tecnico",
+          "observacion": "<string - 1-2 frases, tono positivo, evidencia concreta del historico>"
+        }
+      ]
     },
     "momento_3": {
       "fecha": "DD/MM/AAAA",
       "observaciones_instructor": "<string - tercera persona, evalua desempeno, positivo>",
       "observaciones_aprendiz": "<string - primera persona, reflexivo, menciona logros>",
       "observaciones_coformador": "<string - tercera persona, evalua actitud, positivo>",
-      "compromisos_mejora": "<string - 1-2 compromisos positivos y accionables>"
+      "compromisos_mejora": "<string - DEPRECADO: ver seccion 2c. Se mantiene como fallback si valoraciones[] no esta presente>",
+      "valoraciones": [
+        {
+          "variable": "Gestion de conocimiento",
+          "categoria": "tecnico",
+          "observacion": "<string - 1-2 frases, tono positivo, evidencia concreta del historico>"
+        }
+      ]
     }
   }
 }
@@ -180,7 +194,8 @@ Cuando la fecha actual este dentro de la ventana de `ACTA_M2_FECHA`, inferir/ver
 
 | Campo en JSON | Ubicacion en Word | Como inferirlo |
 |---------------|-------------------|---------------|
-| `actas.momento_2.compromisos_mejora` | Tabla 3, R6C6 y R17C6 | 1-2 compromisos positivos y accionables basados en las actividades realizadas. Formato: "1. ... 2. ..." |
+| `actas.momento_2.valoraciones[]` | Tabla 3, R6-R9 C6 (tecnicas) y R17-R21 C6 (actitudinales) | **FUENTE PRIMARIA.** Array de 9 objetos (4 tecnicos + 5 actitudinales). Cada entrada genera el texto de su celda "Observaciones / Compromisos de mejora" individual. Ver seccion 2c para esquema, mapeo y reglas de inferencia. |
+| `actas.momento_2.compromisos_mejora` | Tabla 3, R6C6 y R17C6 (fallback) | **DEPRECADO.** Solo se usa si `valoraciones[]` no esta presente o esta vacio. Escribe el mismo texto en la primera fila tecnica y actitudinal. 1-2 compromisos positivos y accionables. Formato: "1. ... 2. ..." |
 | `actas.momento_2.observaciones_aprendiz` | Paragraph 17 | Primera persona, reflexivo. Mencionar logros tecnicos especificos del periodo. |
 | `actas.momento_2.observaciones_coformador` | Paragraph 20 | Tercera persona, evalua dedicacion, integracion al equipo, responsabilidad. Tono positivo. |
 
@@ -192,7 +207,8 @@ Cuando la fecha actual este dentro de la ventana de `ACTA_M3_FECHA`, inferir/ver
 
 | Campo en JSON | Ubicacion en Word | Como inferirlo |
 |---------------|-------------------|---------------|
-| `actas.momento_3.compromisos_mejora` | Tabla 5, R6C6 y R17C6 | 1-2 compromisos positivos y accionables. Formato: "1. ... 2. ..." |
+| `actas.momento_3.valoraciones[]` | Tabla 5, R6-R9 C6 (tecnicas) y R17-R21 C6 (actitudinales) | **FUENTE PRIMARIA.** Array de 9 objetos (4 tecnicos + 5 actitudinales). Cada entrada genera el texto de su celda "Observaciones / Compromisos de mejora" individual. Ver seccion 2c para esquema, mapeo y reglas de inferencia. |
+| `actas.momento_3.compromisos_mejora` | Tabla 5, R6C6 y R17C6 (fallback) | **DEPRECADO.** Solo se usa si `valoraciones[]` no esta presente o esta vacio. Escribe el mismo texto en la primera fila tecnica y actitudinal. 1-2 compromisos positivos y accionables. Formato: "1. ... 2. ..." |
 | `actas.momento_3.observaciones_aprendiz` | Tabla 8, R2C1 | Primera persona, reflexivo, logros tecnicos del periodo completo. |
 | `actas.momento_3.observaciones_instructor` | Tabla 7 | Tercera persona, evalua desempeno y actitud. Tono positivo. |
 | `actas.momento_3.observaciones_coformador` | Tabla 6 | Tercera persona, evalua dedicacion, integracion, responsabilidad. Tono positivo. |
@@ -258,6 +274,143 @@ Output NO valido (negativo):
 Ademas, el script genera UN SOLO archivo de Word (`Actas-Inicio-Medio-Final.docx`) que contiene los tres momentos. Si ya se envio el momento 1 y luego se requiere el momento 2, el script toma el mismo archivo plantilla, diligencia los campos faltantes del momento 2 (y momento 3 si aplica), y guarda el archivo actualizado. Esto significa que el JSON en `memory_descriptions.md` debe contener TODOS los campos de los tres momentos, no solo los del momento actual.
 
 Si cambia las fechas en `.env` (`ACTA_M*_FECHA` o `ACTA_VENTANA_DIAS`), **primero revise `actas_enviadas.json`** para confirmar que el catch-up no enviara actas que usted no espera. Para forzar un reenvio de un momento especifico sin catch-up (es decir, sin enviar los momentos anteriores no enviados), edite manualmente el archivo `actas_enviadas.json` cambiando `enviada: false` en el momento deseado. Alternativamente, `--force-moment N` SI activa el catch-up — es decir, `--force-moment 3` enviara los Momentos 1, 2 y 3 si ninguno ha sido enviado.
+
+### 2c. Observaciones por variable (Tabla de Valoracion M2/M3)
+
+#### Problema actual
+
+El script `diligenciar.py` escribe el campo `compromisos_mejora` (un unico string) solamente en la **primera fila tecnica** (fila 6) y la **primera fila actitudinal** (fila 17) de la Tabla de Valoracion. Esto deja **7 de las 9 variables** con la celda "Observaciones / Compromisos de mejora" completamente vacia en el Word generado:
+
+| Filas diligenciadas | Filas vacias |
+|---------------------|--------------|
+| Fila 6 (tecnica) | Filas 7, 8, 9 (tecnicas) |
+| Fila 17 (actitudinal) | Filas 18, 19, 20, 21 (actitudinales) |
+
+La solucion es reemplazar el string unico `compromisos_mejora` por un array `valoraciones[]` de 9 objetos, uno por cada variable evaluada, de modo que cada celda del Word reciba su propio texto contextualizado.
+
+#### Esquema JSON canonico
+
+El array `valoraciones[]` se agrega dentro de `momento_2` y `momento_3` en el JSON de `memory_descriptions.md`. Debe contener exactamente **9 entradas** por momento, en el mismo orden de las filas del Word:
+
+```json
+"actas": {
+  "momento_2": {
+    "fecha": "DD/MM/AAAA",
+    "observaciones_instructor": "",
+    "observaciones_aprendiz": "...",
+    "observaciones_coformador": "...",
+    "compromisos_mejora": "(deprecado - fallback si valoraciones[] ausente)",
+    "valoraciones": [
+      { "variable": "Gestion de conocimiento",            "categoria": "tecnico",     "observacion": "..." },
+      { "variable": "Creatividad y calidad",              "categoria": "tecnico",     "observacion": "..." },
+      { "variable": "Administracion de recursos",         "categoria": "tecnico",     "observacion": "..." },
+      { "variable": "Seguridad y salud en el trabajo",    "categoria": "tecnico",     "observacion": "..." },
+      { "variable": "Trabajo en equipo",                  "categoria": "actitudinal", "observacion": "..." },
+      { "variable": "Relaciones interpersonales",         "categoria": "actitudinal", "observacion": "..." },
+      { "variable": "Solucion de problemas",              "categoria": "actitudinal", "observacion": "..." },
+      { "variable": "Cumplimiento",                       "categoria": "actitudinal", "observacion": "..." },
+      { "variable": "Organizacion",                       "categoria": "actitudinal", "observacion": "..." }
+    ]
+  },
+  "momento_3": {
+    "fecha": "DD/MM/AAAA",
+    "observaciones_instructor": "...",
+    "observaciones_aprendiz": "...",
+    "observaciones_coformador": "...",
+    "compromisos_mejora": "(deprecado - fallback si valoraciones[] ausente)",
+    "valoraciones": [
+      { "variable": "Gestion de conocimiento",            "categoria": "tecnico",     "observacion": "..." },
+      { "variable": "Creatividad y calidad",              "categoria": "tecnico",     "observacion": "..." },
+      { "variable": "Administracion de recursos",         "categoria": "tecnico",     "observacion": "..." },
+      { "variable": "Seguridad y salud en el trabajo",    "categoria": "tecnico",     "observacion": "..." },
+      { "variable": "Trabajo en equipo",                  "categoria": "actitudinal", "observacion": "..." },
+      { "variable": "Relaciones interpersonales",         "categoria": "actitudinal", "observacion": "..." },
+      { "variable": "Solucion de problemas",              "categoria": "actitudinal", "observacion": "..." },
+      { "variable": "Cumplimiento",                       "categoria": "actitudinal", "observacion": "..." },
+      { "variable": "Organizacion",                       "categoria": "actitudinal", "observacion": "..." }
+    ]
+  }
+}
+```
+
+> **Nota de orden:** El orden del array **debe** ser: filas 6, 7, 8, 9 (tecnicas) seguido de filas 17, 18, 19, 20, 21 (actitudinales). No se incluye un campo `orden` explicito; el indice del array (0-8) determina la posicion. Esto simplifica el esquema y evita redundancia.
+
+#### Mapeo variable -> fila del Word
+
+| Indice | Variable | Categoria | Fila Word (Tabla 3 M2 / Tabla 5 M3) | Celda |
+|--------|----------|-----------|--------------------------------------|-------|
+| 0 | Gestion de conocimiento | tecnico | 6 | C6 |
+| 1 | Creatividad y calidad | tecnico | 7 | C6 |
+| 2 | Administracion de recursos | tecnico | 8 | C6 |
+| 3 | Seguridad y salud en el trabajo | tecnico | 9 | C6 |
+| 4 | Trabajo en equipo | actitudinal | 17 | C6 |
+| 5 | Relaciones interpersonales | actitudinal | 18 | C6 |
+| 6 | Solucion de problemas | actitudinal | 19 | C6 |
+| 7 | Cumplimiento | actitudinal | 20 | C6 |
+| 8 | Organizacion | actitudinal | 21 | C6 |
+
+#### Especificacion de inferencia (texto del usuario)
+
+> **Objetivo:** Generar la observacion del campo "Observaciones / Compromisos de mejora" usando las actividades y evidencias del aprendiz (docx).
+>
+> **Entrada:**
+> - Variable evaluada.
+> - Categoria: Factor tecnico / Factor actitudinal.
+> - Actividades realizadas del historico.
+> - Evidencias disponibles.
+>
+> **Reglas:**
+> - La valoracion siempre sera: Satisfactorio.
+> - Generar texto breve (1-2 frases).
+> - Relacionar la variable con actividades reales realizadas.
+> - Usar lenguaje institucional SENA.
+> - No inventar actividades no registradas.
+> - No repetir observaciones entre variables.
+>
+> **Plantilla base:**
+> *"Demostro desempeno satisfactorio en [variable], evidenciado mediante su participacion en actividades relacionadas con [actividad/evidencia]. Continua fortaleciendo sus competencias tecnicas y profesionales."*
+>
+> **Ejemplos segun contexto:**
+>
+> | Variable | Ejemplo de observacion |
+> |----------|----------------------|
+> | Gestion de conocimiento (tecnico) | "Demostro apropiacion del conocimiento mediante el aprendizaje y aplicacion de tecnologias como AWS, Python, FastAPI y herramientas de datos, fortaleciendo sus competencias tecnicas." |
+> | Creatividad y calidad (tecnico) | "Aplico buenas practicas de desarrollo mediante la implementacion de soluciones automatizadas, arquitectura limpia y procesos orientados a mejorar la calidad del software." |
+> | Administracion de recursos (tecnico) | "Fortalecio la gestion de recursos tecnologicos mediante el uso de servicios AWS, procesamiento de datos y analisis de arquitecturas orientadas a soluciones empresariales." |
+> | Trabajo en equipo (actitudinal) | "Demostro adecuada integracion con el equipo de trabajo, participando en actividades tecnicas y aportando en la construccion de soluciones para requerimientos internos." |
+>
+> **Salida esperada (por variable):**
+> ```json
+> {
+>   "variable": "Gestion de conocimiento",
+>   "observacion": "Demostro apropiacion del conocimiento mediante..."
+> }
+> ```
+
+#### Reglas de inferencia para `valoraciones[]`
+
+1. **Una observacion unica por variable:** Cada una de las 9 variables debe recibir un texto distinto. Nunca copiar el mismo texto en dos variables.
+2. **Longitud:** 1-2 frases (maximo 40 palabras por observacion).
+3. **Evidencia concreta:** Cada observacion debe referenciar al menos una actividad o evidencia real del `historico_actividades.md` o de `bitacoras[].actividades[]`. No inventar actividades.
+4. **Tono positivo e institucional SENA:** Usar verbos en pasado ("Demostro", "Aplico", "Fortalecio", "Participo"). La valoracion implicita siempre es "Satisfactorio".
+5. **No repetir entre momentos:** Si el aprendiz ya tiene una observacion similar en M2, la de M3 debe reflejar progreso o profundizacion (no copiar literal).
+6. **Variables tecnicas:** Relacionar con tecnologias, herramientas, frameworks, arquitecturas o estandares concretos que aparezcan en el historico (AWS, Python, FastAPI, DuckDB, Polars, SDD, DAMA, CDC, etc.).
+7. **Variables actitudinales:** Relacionar con comportamientos observables: integracion al equipo, puntualidad, proactividad, resolucion de conflictos, organizacion del trabajo.
+8. **Variable especial — Seguridad y salud en el trabajo:** Si el historico menciona politicas de seguridad, certificaciones o capacitaciones, usarlas. Si no hay evidencia directa, usar un texto generico institucional ("Cumplio con los lineamientos de seguridad y salud en el trabajo durante la etapa productiva.").
+
+#### Compatibilidad hacia atras (fallback `compromisos_mejora`)
+
+El campo `compromisos_mejora` (string unico) **se mantiene** en el JSON por compatibilidad hacia atras:
+
+- Si `valoraciones[]` **existe y tiene 9 entradas**: el script debe usar cada `observacion` para su celda correspondiente. `compromisos_mejora` se ignora.
+- Si `valoraciones[]` **no existe o esta vacio**: el script usa `compromisos_mejora` como fallback (comportamiento actual: escribe el mismo texto en filas 6 y 17).
+- Si **ambos** existen pero `valoraciones[]` tiene menos de 9 entradas: rellenar las que faltan con `compromisos_mejora` como valor por defecto.
+
+> **Nota para el agente inferidor:** Cuando genere el JSON para `memory_descriptions.md`, siempre debe incluir `valoraciones[]` con las 9 entradas completas para M2 y M3. El campo `compromisos_mejora` puede dejarse como string vacio si `valoraciones[]` esta completo.
+
+#### Memoria operativa del proceso
+
+Cada nueva bitacora agregada al `historico_actividades.md` amplia el contexto disponible para generar mejores observaciones en futuros formatos. El agente debe considerar **todas** las bitacoras acumuladas (no solo la mas reciente) al inferir las observaciones de cada variable, de modo que el texto refleje la evolucion completa del aprendiz durante la etapa productiva.
 
 ---
 

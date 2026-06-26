@@ -102,6 +102,65 @@ uv run python scripts/reset.py --all --include-env --yes
 - Logica de catch-up: si ejecuta cerca de la fecha del Momento 2 o 3, las actas de momentos anteriores no enviadas se envian automaticamente.
 - Estado de envio persistido en `contexto/actas_enviadas.json`.
 - Checklist de campos que requieren diligenciamiento/firma manual.
+- Observaciones por variable: las 9 celdas de la Tabla de Valoracion (M2 y M3) se diligencian individualmente con texto contextualizado por variable.
+
+---
+
+## Observaciones por variable (Tabla de Valoracion)
+
+### Que se resolvio
+
+Antes, el script escribia un unico texto de compromisos de mejora solo en la **primera fila tecnica** (fila 6) y la **primera fila actitudinal** (fila 17) de la Tabla de Valoracion del acta. Esto dejaba **7 de las 9 variables evaluadas con la celda de observaciones completamente vacia** en el Word generado:
+
+| Filas diligenciadas antes | Filas que quedaban vacias |
+|---------------------------|---------------------------|
+| Fila 6 (tecnica) | Filas 7, 8, 9 (tecnicas) |
+| Fila 17 (actitudinal) | Filas 18, 19, 20, 21 (actitudinales) |
+
+Ahora cada una de las 9 variables recibe su propio texto de observacion, generado de forma individualizada por el agente de IA.
+
+### Nueva estructura `valoraciones[]`
+
+El campo `compromisos_mejora` (string unico) fue reemplazado por un array **`valoraciones[]`** de 9 objetos dentro de cada momento (`momento_2` y `momento_3`) en el JSON de `contexto/memory_descriptions.md`. Cada objeto contiene:
+
+| Campo | Tipo | Descripcion |
+|-------|------|-------------|
+| `variable` | string | Nombre de la variable evaluada |
+| `categoria` | string | `"tecnico"` o `"actitudinal"` |
+| `observacion` | string | Texto contextualizado (1-2 frases, max. 40 palabras) |
+
+### Variables diligenciadas (9 en total)
+
+**4 variables tecnicas** (filas 6-9 de la Tabla de Valoracion):
+
+| # | Variable |
+|---|----------|
+| 1 | Gestion de conocimiento |
+| 2 | Creatividad y calidad |
+| 3 | Administracion de recursos |
+| 4 | Seguridad y salud en el trabajo |
+
+**5 variables actitudinales** (filas 17-21 de la Tabla de Valoracion):
+
+| # | Variable |
+|---|----------|
+| 5 | Trabajo en equipo |
+| 6 | Relaciones interpersonales |
+| 7 | Solucion de problemas |
+| 8 | Cumplimiento |
+| 9 | Organizacion |
+
+### Compatibilidad hacia atras
+
+El campo legacy `compromisos_mejora` se mantiene en el JSON como fallback:
+
+- Si `valoraciones[]` **existe y tiene 9 entradas** → el script usa cada `observacion` para su celda correspondiente. `compromisos_mejora` se ignora.
+- Si `valoraciones[]` **no existe o esta vacio** → el script usa `compromisos_mejora` como antes (mismo texto en filas 6 y 17).
+- Si **ambos existen** pero `valoraciones[]` tiene menos de 9 entradas → las faltantes se rellenan con `compromisos_mejora`.
+
+### Generacion por el agente de IA
+
+Las observaciones son generadas por el agente de IA al diligenciar `contexto/memory_descriptions.md`, siguiendo la especificacion detallada de `instrucciones/AGENTS.md` (seccion 2c). El agente debe producir un texto unico por variable, con tono institucional SENA, basado en las actividades reales del historico y sin inventar evidencias.
 
 ---
 

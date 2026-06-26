@@ -263,6 +263,35 @@ def apply_calibri_9(element):
             apply_calibri_9(paragraph)
 
 
+def fill_valoraciones_table(table, valoraciones, fallback_text):
+    """
+    Escribe las observaciones por variable en la tabla de valoracion (Tabla 3 para M2, Tabla 5 para M3).
+    Mapea indices del array valoraciones[] a filas del Word:
+        0->6, 1->7, 2->8, 3->9 (tecnicas)
+        4->17, 5->18, 6->19, 7->20, 8->21 (actitudinales)
+    Si valoraciones esta vacio o None, escribe fallback_text en filas 6 y 17 (compatibilidad hacia atras).
+    Si una observacion especifica esta vacia o None, usa fallback_text.
+    """
+    filas_word = [6, 7, 8, 9, 17, 18, 19, 20, 21]
+
+    if not valoraciones:
+        # Compatibilidad hacia atras: escribir fallback en filas 6 y 17
+        if fallback_text:
+            table.rows[6].cells[6].text = fallback_text
+            apply_calibri_9(table.rows[6].cells[6])
+            table.rows[17].cells[6].text = fallback_text
+            apply_calibri_9(table.rows[17].cells[6])
+        return
+
+    for idx, fila in enumerate(filas_word):
+        obs = ''
+        if idx < len(valoraciones) and isinstance(valoraciones[idx], dict):
+            obs = valoraciones[idx].get('observacion', '') or ''
+        texto = obs if obs else fallback_text
+        table.rows[fila].cells[6].text = texto
+        apply_calibri_9(table.rows[fila].cells[6])
+
+
 def process_word_actas(moment, actas_data, execution_date_str, output_dir=None):
     """
     Rellena el momento correspondiente (1, 2 o 3) en el Word.
@@ -378,14 +407,10 @@ def process_word_actas(moment, actas_data, execution_date_str, output_dir=None):
             apply_calibri_9(doc.paragraphs[20])
             print("        [Momento 2] Retroalimentación co-formador aplicada (P20).")
 
-        # 4. Compromisos de mejora en Tabla 3, columna "Observaciones / Compromisos de mejora"
-        compromisos = actas_data['actas']['momento_2'].get('compromisos_mejora', '')
-        if compromisos:
-            # Escribir en la primera fila técnica (row 6, col 6) y actitudinal (row 17, col 6)
-            table3.rows[6].cells[6].text = compromisos
-            apply_calibri_9(table3.rows[6].cells[6])
-            table3.rows[17].cells[6].text = compromisos
-            apply_calibri_9(table3.rows[17].cells[6])
+        # 4. Observaciones por variable en Tabla 3, columna "Observaciones / Compromisos de mejora"
+        valoraciones = actas_data['actas']['momento_2'].get('valoraciones', [])
+        fallback = actas_data['actas']['momento_2'].get('compromisos_mejora', '')
+        fill_valoraciones_table(table3, valoraciones, fallback)
 
         # 5. Fecha de diligenciamiento en párrafo P22
         doc.paragraphs[22].text = f"Ciudad: Bogotá D.C.  y fecha de diligenciamiento: {execution_date_str} de forma presencial ___ o virtual   X "
@@ -439,13 +464,10 @@ def process_word_actas(moment, actas_data, execution_date_str, output_dir=None):
             apply_calibri_9(table7.rows[1].cells[1])
             print("        [Momento 3] Retroalimentación instructor aplicada (Tabla 7).")
 
-        # 5. Compromisos de mejora en Tabla 5, columna "Observaciones / Compromisos de mejora"
-        compromisos = actas_data['actas']['momento_3'].get('compromisos_mejora', '')
-        if compromisos:
-            table5.rows[6].cells[6].text = compromisos
-            apply_calibri_9(table5.rows[6].cells[6])
-            table5.rows[17].cells[6].text = compromisos
-            apply_calibri_9(table5.rows[17].cells[6])
+        # 5. Observaciones por variable en Tabla 5, columna "Observaciones / Compromisos de mejora"
+        valoraciones = actas_data['actas']['momento_3'].get('valoraciones', [])
+        fallback = actas_data['actas']['momento_3'].get('compromisos_mejora', '')
+        fill_valoraciones_table(table5, valoraciones, fallback)
 
         # 6. Marcar juicio de evaluación (búsqueda por texto)
         for idx in range(len(doc.paragraphs)):
